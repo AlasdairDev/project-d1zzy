@@ -1,0 +1,15 @@
+[Unit]
+Description=D1zzy Market - monero-wallet-rpc (optional; set MONERO_RPC_URL=http://monero:18083/json_rpc)
+Requires=d1zzy-monerod.service
+After=d1zzy-monerod.service
+
+[Container]
+ContainerName=d1zzy-monero
+Image=docker.io/sethsimmons/simple-monero-wallet-rpc:v0.18.3.4
+Exec=--daemon-address=monerod:18081 --trusted-daemon --allow-mismatched-daemon-version --rpc-bind-port=18083 --rpc-login=monero:monero --wallet-dir=/home/monero/wallet
+Network=d1zzy-network.network
+NetworkAlias=monero
+Volume=d1zzy-monerodata.volume:/home/monero/wallet
+
+[Service]
+Restart=always

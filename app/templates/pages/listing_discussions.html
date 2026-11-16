@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}Discussions on {{ listing.title or "this listing" }} · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+  <h1 class="text-2xl font-semibold">Discussions on <span class="text-accent">{{ listing.title }}</span></h1>
+  <div class="flex flex-wrap items-center gap-2">
+    <a class="btn-primary" href="/listings/{{ listing.id }}/discussions/new">
+      <span class="material-symbols-rounded icon-sm" aria-hidden="true">add</span> Start Discussion
+    </a>
+  </div>
+</div>
+
+{% if discussions %}
+<div class="space-y-4">
+  {% for d in discussions %}
+  <article class="card p-4 space-y-3">
+    <header class="flex flex-wrap items-start justify-between gap-2">
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-baseline gap-2">
+          <span class="badge badge-{{ {'question': 'warning', 'review': 'info', 'announcement': 'warning', 'discussion': 'accent'}[d.type] }}">{{ d.type|capitalize }}</span>
+          {% if d.is_pinned %}<span class="badge badge-accent">Pinned</span>{% endif %}
+          {% if d.is_locked %}<span class="badge badge-warning">Locked</span>{% endif %}
+        </div>
+        <h2 class="text-lg font-semibold mt-1 truncate">
+          {% if d.type == 'review' and d.rating %}
+            <span class="text-amber-400 mr-1">{{ '★' * d.rating }}</span>
+          {% endif %}
+          <a href="/discussions/{{ d.id }}" class="text-text hover:text-accent no-underline">{{ d.title or "Discussion" }}</a>
+        </h2>
+        <p class="text-sm text-muted mt-1">
+          by <a href="/u/{{ d.author.handle }}" class="text-accent hover:no-underline">@{{ d.author.handle }}</a>
+          · {{ d.created_at | ago }}
+          {% if d.edited_at %}· edited {{ d.edited_at | ago }}{% endif %}
+        </p>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <div class="flex items-center gap-1 text-lg">
+          <span class="material-symbols-rounded text-accent" aria-hidden="true">thumb_up</span>
+          <span class="font-semibold">{{ d.upvotes }}</span>
+          <span class="material-symbols-rounded text-muted" aria-hidden="true">thumb_down</span>
+          <span class="font-semibold">{{ d.downvotes }}</span>
+        </div>
+        <div class="flex items-center gap-1 text-muted text-sm">
+          <span class="material-symbols-rounded" aria-hidden="true">chat_bubble</span>
+          <span>{{ d.reply_count }}</span>
+        </div>
+      </div>
+    </header>
+
+    {% if d.content %}
+    <div class="prose text-sm text-gray-300 max-h-40 overflow-hidden">
+      <p class="line-clamp-3 whitespace-pre-wrap">{{ d.content | truncate(300) }}</p>
+    </div>
+    {% endif %}
+
+    <footer class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
+      <div class="flex items-center gap-2">
+        {% if user_votes.get(d.id) == 1 %}
+        <button class="btn-primary btn-sm" disabled><span class="material-symbols-rounded icon-sm" aria-hidden="true">thumb_up</span> {{ d.upvotes }}</button>
+        {% else %}
+        <form action="/api/discussions/{{ d.id }}/vote" method="post" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="vote" value="1">
+          <button class="btn-ghost btn-sm" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">thumb_up</span> {{ d.upvotes }}</button>
+        </form>
+        {% endif %}
+        {% if user_votes.get(d.id) == -1 %}
+        <button class="btn-ghost btn-sm" disabled><span class="material-symbols-rounded icon-sm" aria-hidden="true">thumb_down</span> {{ d.downvotes }}</button>
+        {% else %}
+        <form action="/api/discussions/{{ d.id }}/vote" method="post" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="vote" value="-1">
+          <button class="btn-ghost btn-sm" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">thumb_down</span> {{ d.downvotes }}</button>
+        </form>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/discussions/{{ d.id }}" class="btn-ghost btn-sm"><span class="material-symbols-rounded icon-sm" aria-hidden="true">chat_bubble</span> {{ d.reply_count }} replies</a>
+        {% if d.type == 'question' %}
+        <span class="badge badge-info">Question</span>
+        {% elif d.type == 'review' %}
+        <span class="badge badge-info">Review</span>
+        {% elif d.type == 'announcement' %}
+        <span class="badge badge-warning">Announcement</span>
+        {% else %}
+        <span class="badge badge-muted">Discussion</span>
+        {% endif %}
+      </div>
+    </footer>
+  </article>
+  {% endfor %}
+</div>
+
+{% if page > 1 %}
+<div class="flex justify-center mt-6">
+  <a href="/listings/{{ listing.id }}/discussions?page={{ page - 1 }}" class="btn-ghost">Previous</a>
+  <a href="/listings/{{ listing.id }}/discussions?page={{ page + 1 }}" class="btn-primary">Next</a>
+</div>
+{% endif %}
+{% else %}
+<div class="empty-state">
+  <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">forum</span></span>
+  <p class="empty-state-title">No discussions yet</p>
+  <p class="empty-state-text">Be the first to start a discussion!</p>
+  <a class="btn-primary" href="/listings/{{ listing.id }}/discussions/new">Start Discussion</a>
+</div>
+{% endif %}
+{% endblock %}

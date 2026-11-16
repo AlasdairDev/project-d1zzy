@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}Log in · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-sm space-y-5">
+  {% if error %}<div class="flash flash-error" role="alert"><span class="material-symbols-rounded icon-sm" aria-hidden="true">error</span> {{ error }}</div>{% endif %}
+  {% if notice %}<div class="flash flash-success" role="status"><span class="material-symbols-rounded icon-sm" aria-hidden="true">check_circle</span> {{ notice }}</div>{% endif %}
+
+  {% if mode == "reset" and reset_token %}
+    <div class="text-center mb-4">
+      <span class="material-symbols-rounded icon-xl text-accent" aria-hidden="true">lock_open</span>
+      <h1 class="text-2xl font-semibold mt-2">Choose a new password</h1>
+    </div>
+    <form class="card space-y-4" action="/reset-password" method="post">
+      {{ m.csrf() }}
+      <input type="hidden" name="token" value="{{ reset_token }}">
+      {{ m.field("password", "New password (10+ characters)", "", "password", true, 'minlength="10" autocomplete="new-password"') }}
+      <button class="btn-primary w-full" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">save</span> Set password</button>
+    </form>
+
+  {% elif mode == "reset" %}
+    <div class="text-center mb-4">
+      <span class="material-symbols-rounded icon-xl text-accent" aria-hidden="true">lock_reset</span>
+      <h1 class="text-2xl font-semibold mt-2">Reset password</h1>
+    </div>
+    <form class="card space-y-4" action="/reset-password" method="post">
+      {{ m.csrf() }}
+      {{ m.field("email", "Email", "", "email", true, 'autocomplete="email"') }}
+      <button class="btn-primary w-full" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">mail</span> Send reset link</button>
+    </form>
+
+  {% else %}
+    <div class="text-center mb-4">
+      <span class="material-symbols-rounded icon-xl text-accent" aria-hidden="true">login</span>
+      <h1 class="text-2xl font-semibold mt-2">Log in</h1>
+    </div>
+    <form class="card space-y-4" action="/login" method="post">
+      {{ m.csrf() }}
+      <input type="hidden" name="next" value="{{ next or '/' }}">
+      {{ m.field("email", "Email", email or "", "email", true, 'autocomplete="username"') }}
+      {{ m.field("password", "Password", "", "password", true, 'autocomplete="current-password"') }}
+      <button class="btn-primary w-full" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">login</span> Log in</button>
+    </form>
+    <p class="text-sm text-muted text-center">No account? <a href="/register" class="text-accent">Sign up</a> · <a href="/reset-password" class="text-accent">Forgot password?</a></p>
+  {% endif %}
+</div>
+{% endblock %}

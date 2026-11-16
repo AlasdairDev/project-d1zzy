@@ -1,0 +1,19 @@
+[Unit]
+Description=D1zzy Market - Redis
+
+[Container]
+ContainerName=d1zzy-redis
+Image=docker.io/library/redis:7-alpine
+Exec=redis-server --appendonly yes
+Network=d1zzy-network.network
+NetworkAlias=redis
+Volume=d1zzy-redisdata.volume:/data
+HealthCmd=redis-cli ping
+HealthInterval=10s
+Notify=healthy
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

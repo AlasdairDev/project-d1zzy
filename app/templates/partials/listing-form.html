@@ -1,0 +1,56 @@
+{# Shared by listing_new / listing_edit. expects: action, api, method, p (ListingPlain or None) #}
+{% import "macros.html" as m with context %}
+<form class="card space-y-5" action="{{ action }}" method="post" enctype="multipart/form-data"
+      x-data="signedForm" data-kind="listing" data-api="{{ api }}" data-method="{{ method }}"
+      data-next="/listings/{id}?m={{ 'listing_updated' if p else 'listing_created' }}"
+      {% if p %}data-ct="{{ view.listing.listing_ct | b64 }}"{% endif %}>
+  {{ m.csrf() }}
+
+  {{ m.field("title", "Title", p.title if p else "", "text", true, 'minlength="3" maxlength="120"') }}
+
+  <div class="field">
+    <label for="f-desc" class="field-label">Description</label>
+    <textarea id="f-desc" class="input" name="desc" rows="6" maxlength="5000">{{ p.desc if p }}</textarea>
+    <p class="field-hint">Be specific. Condition, dimensions, flaws, what's included.</p>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-3">
+    {{ m.field("price", "Price", ("%.2f" % (p.price_cents / 100)) if p else "", "number", true, 'step="0.01" min="0"') }}
+    {{ m.select("currency", "Currency", currencies, p.currency if p else "php", {"usd": "USD", "eur": "EUR", "gbp": "GBP", "sgd": "SGD", "php": "PHP", "btc": "BTC", "xmr": "XMR"}) }}
+    {{ m.select("condition", "Condition", conditions, p.condition if p else "good") }}
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-3">
+    {{ m.select("category", "Category", categories, p.category if p else "other") }}
+    {{ m.field("location_approx", "Approximate location", p.location_approx if p else "", "text", false, 'maxlength="80" placeholder="e.g. Ships worldwide"') }}
+    {{ m.field("expires_at", "Expires (optional)", p.expires_at if p and p.expires_at else "", "date") }}
+  </div>
+
+  {% if p and p.images %}
+  <fieldset class="space-y-3">
+    <legend class="text-sm text-muted">Current photos (tick to remove)</legend>
+    <div class="image-preview-grid">
+      {% for img in p.images %}
+      <label class="image-preview-item">
+        <img src="/media/{{ view.listing.id }}/{{ loop.index0 }}" alt="" class="loaded">
+        <span class="text-xs text-muted">Photo {{ loop.index }}</span>
+        <input type="checkbox" name="remove_images" value="{{ loop.index0 }}" class="checkbox">
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
+
+  <div class="field">
+    <label for="f-images" class="field-label">Photos (up to 8; JPEG, PNG, WebP, GIF; 5 MB each)</label>
+    <input id="f-images" class="input" type="file" name="images" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+    <p class="field-hint">Photos are encrypted with a fresh key before they are stored on IPFS. With JavaScript on, that happens in your browser.</p>
+  </div>
+
+  <p class="text-xs text-muted">
+    With your keys unlocked, the listing is encrypted and signed in your browser. Without JavaScript, the server encrypts it and signs on your behalf (shown as "server-signed").
+  </p>
+
+  <p class="text-sm text-accent" x-text="status" aria-live="polite"></p>
+  <button class="btn-primary w-full" type="submit" x-bind:disabled="busy">{{ "Save changes" if p else "Publish listing" }}</button>
+</form>

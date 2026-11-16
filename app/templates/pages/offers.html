@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Offers · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl font-semibold">Offers</h1>
+  <nav class="tabs" aria-label="Offer view">
+    <a class="tab {% if tab == 'buying' %}tab-active{% endif %}" href="/offers?tab=buying">Buying</a>
+    <a class="tab {% if tab == 'selling' %}tab-active{% endif %}" href="/offers?tab=selling">Selling</a>
+  </nav>
+</div>
+
+{% if request.query_params.get("paid") %}
+<div class="flash flash-success mb-6" role="status"><span class="material-symbols-rounded icon-sm" aria-hidden="true">check_circle</span> Thanks! Your payment is being confirmed; this page updates once the provider notifies us.</div>
+{% endif %}
+
+{% if notifications %}
+<div class="card space-y-2 mb-6">
+  <h2 class="text-sm text-muted">Notifications</h2>
+  <ul class="space-y-1 text-sm">
+    {% for n in notifications %}<li><a href="{{ n.link }}" class="text-accent hover:no-underline">{{ n.text }}</a></li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if rows %}
+<div class="space-y-4">
+  {% for row in rows %}{% include "partials/offer-card.html" %}{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">{% if tab == "selling" %}local_shipping{% else %}shopping_cart{% endif %}</span></span>
+  <p class="empty-state-title">No offers yet</p>
+  <p class="empty-state-text">{% if tab == "selling" %}No offers on your listings yet.{% else %}You have not made any offers.{% endif %}</p>
+  {% if tab == "buying" %}<a class="btn-primary" href="/listings">Browse listings →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{# expects `m` (message_out dict), `user`, `conv` #}
+{% set mine = m.sender_id == user.id | string %}
+<div id="msg-{{ m.id }}" class="message-bubble {{ 'message-bubble-mine' if mine else 'message-bubble-theirs' }}"
+     data-id="{{ m.id }}" data-mode="{{ m.mode }}" data-sender="{{ m.sender_id }}"
+     data-header="{{ m.header }}" data-ct="{{ m.ciphertext }}">
+  <div class="message-bubble-text">
+    {% if m.mode == "server" %}{{ m.plaintext }}{% else %}<span class="material-symbols-rounded icon-sm" aria-hidden="true">lock</span> End-to-end encrypted message{% endif %}
+  </div>
+  <div class="message-bubble-meta">
+    <span class="msg-meta">
+      {% if m.mode == "server" %}
+        <span class="material-symbols-rounded icon-xs" aria-hidden="true">warning</span> Not end-to-end encrypted
+      {% else %}
+        <span class="material-symbols-rounded icon-xs" aria-hidden="true">lock</span> End-to-end encrypted
+      {% endif %}
+    </span>
+    <span>{{ m.created_at[11:16] if m.created_at }}</span>
+  </div>
+  {% if not mine %}
+    {% with target_type="message", target_id=m.id, details_prefill=("Reported message: " ~ m.plaintext) if m.mode == "server" else "" %}
+      {% include "partials/report-modal.html" %}
+    {% endwith %}
+  {% endif %}
+</div>

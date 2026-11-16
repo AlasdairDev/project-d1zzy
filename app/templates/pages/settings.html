@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}Settings · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+  <h1 class="text-2xl font-semibold">Settings</h1>
+
+  {% for w in warnings %}
+  <div class="flash flash-warn"><span class="material-symbols-rounded icon-sm" aria-hidden="true">warning</span> Moderator warning ({{ w.created_at | ago }}): {{ w.reason }}</div>
+  {% endfor %}
+
+  <section class="card space-y-4">
+    <h2 class="text-lg font-semibold">Account</h2>
+    <p class="text-sm">Logged in as <strong>@{{ user.handle }}</strong> ({{ user.email }}).
+      {% if user.is_verified %}<span class="badge badge-success">email verified</span>
+      {% else %}<span class="badge badge-warning">email not verified</span>{% endif %}
+    </p>
+    {% if not user.is_verified %}
+    <form action="/verify/resend" method="post" class="mt-3">{{ m.csrf() }}<button class="btn-ghost" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">mail</span> Resend verification email</button></form>
+    {% endif %}
+  </section>
+
+  <section class="card space-y-5" x-data="keySetup">
+    <h2 class="text-lg font-semibold">Encryption keys</h2>
+    <p class="text-sm text-muted">
+      Your passphrase derives an Ed25519 signing key and an X25519 encryption key <em>in your browser</em> (Argon2id).
+      Only the public keys are uploaded. They sign your listings, offers, ratings and reports, and power end-to-end encrypted chat.
+      The passphrase is separate from your password and the server never sees it: if you lose it and your backup seed, nobody can recover it.
+    </p>
+    <noscript><p class="text-sm text-warning"><span class="material-symbols-rounded icon-xs" aria-hidden="true">warning</span> Key management needs JavaScript. Without it, the server signs your content on your behalf (shown as "server-signed"), and chat is not end-to-end encrypted.</p></noscript>
+
+    {% if user.signing_pubkey %}
+    <p class="text-xs text-muted">Published signing key: <code class="break-all">{{ user.signing_pubkey | b64 }}</code></p>
+    <div class="flex flex-wrap gap-2" x-cloak>
+      <span class="badge badge-success" x-show="unlocked"><span class="material-symbols-rounded icon-xs" aria-hidden="true">lock_open</span> Unlocked for this session</span>
+      <button class="btn-primary" type="button" x-show="locked" x-on:click="unlock"><span class="material-symbols-rounded icon-sm" aria-hidden="true">lock_open</span> Unlock</button>
+      <button class="btn-ghost" type="button" x-show="unlocked" x-on:click="lock"><span class="material-symbols-rounded icon-sm" aria-hidden="true">lock</span> Lock</button>
+      <button class="btn-ghost" type="button" x-on:click="reveal"><span class="material-symbols-rounded icon-sm" aria-hidden="true">key</span> Show backup seed</button>
+    </div>
+    <p class="break-all rounded-lg bg-surface p-3 font-mono text-xs text-warning" x-show="seedHex" x-text="seedHex" x-cloak></p>
+    <details class="text-sm" x-cloak>
+      <summary class="cursor-pointer text-muted">Restore from backup seed</summary>
+      <div class="mt-2 flex gap-2"><input class="input font-mono" x-ref="seedInput" placeholder="64 hex characters" aria-label="Backup seed"><button class="btn-ghost" type="button" x-on:click="restore">Restore</button></div>
+    </details>
+    <details class="text-sm" x-cloak>
+      <summary class="cursor-pointer text-muted">Change passphrase (creates new keys)</summary>
+      <div class="mt-3 space-y-3">
+        <input class="input" type="password" x-ref="pass1" placeholder="New passphrase (12+ characters)" autocomplete="off" aria-label="New passphrase">
+        <input class="input" type="password" x-ref="pass2" placeholder="Repeat passphrase" autocomplete="off" aria-label="Repeat passphrase">
+        <button class="btn-danger" type="button" x-on:click="create" x-bind:disabled="busy">Replace my keys</button>
+      </div>
+    </details>
+    {% else %}
+    <div class="space-y-3" x-cloak>
+      <input class="input" type="password" x-ref="pass1" placeholder="Choose a passphrase (12+ characters)" autocomplete="off" aria-label="Passphrase">
+      <input class="input" type="password" x-ref="pass2" placeholder="Repeat passphrase" autocomplete="off" aria-label="Repeat passphrase">
+      <button class="btn-primary" type="button" x-on:click="create" x-bind:disabled="busy">Create my keys</button>
+    </div>
+    {% endif %}
+    <p class="text-sm text-warning" x-text="status" aria-live="polite"></p>
+  </section>
+
+  <section class="card space-y-4" id="vendor">
+    <h2 class="text-lg font-semibold">Selling</h2>
+    {% if user.is_vendor %}
+    <p class="text-sm">You are a vendor since {{ user.vendor_since.strftime("%d %b %Y") if user.vendor_since }}. <a href="/vendor" class="text-accent">Open your dashboard →</a></p>
+    {% else %}
+    <p class="text-sm text-muted">Vendors can publish listings. By applying you agree not to list prohibited items; listings are moderated and can be removed.</p>
+    <form action="/settings/vendor" method="post" class="space-y-4">
+      {{ m.csrf() }}
+      <div class="field">
+        <label for="f-bio" class="field-label">Public vendor bio</label>
+        <textarea id="f-bio" class="input" name="bio" rows="3" maxlength="1000" placeholder="Tell buyers about yourself..."></textarea>
+      </div>
+      <button class="btn-primary" type="submit">Become a vendor</button>
+    </form>
+    {% endif %}
+  </section>
+
+  <section class="card space-y-3">
+    <h2 class="text-lg font-semibold">Payment methods on this server</h2>
+    <ul class="space-y-2 text-sm">
+      <li class="flex items-center gap-3"><span class="material-symbols-rounded icon-md {% if payment.paymongo %}text-success{% else %}text-muted{% endif %}" aria-hidden="true">account_balance_wallet</span> GCash (PayMongo): {{ "enabled" if payment.paymongo else "not configured" }}</li>
+      <li class="flex items-center gap-3"><span class="material-symbols-rounded icon-md {% if payment.paymongo %}text-success{% else %}text-muted{% endif %}" aria-hidden="true">payments</span> Maya (PayMongo): {{ "enabled" if payment.paymongo else "not configured" }}</li>
+      <li class="flex items-center gap-3"><span class="material-symbols-rounded icon-md {% if payment.paymongo %}text-success{% else %}text-muted{% endif %}" aria-hidden="true">credit_card</span> Cards and bank transfer (PayMongo): {{ "enabled" if payment.paymongo else "not configured" }}</li>
+      <li class="flex items-center gap-3"><span class="material-symbols-rounded icon-md text-success" aria-hidden="true">local_shipping</span> Cash on delivery: available</li>
+    </ul>
+    <p class="text-xs text-muted">Listings on this deployment are priced in Philippine pesos (PHP).</p>
+  </section>
+</div>
+{% endblock %}

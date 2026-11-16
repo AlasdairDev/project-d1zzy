@@ -1,0 +1,21 @@
+[Unit]
+Description=D1zzy Market - IPFS (Kubo, offline: never announces the host to the public DHT)
+
+[Container]
+ContainerName=d1zzy-ipfs
+Image=docker.io/ipfs/kubo:v0.33.0
+Exec=daemon --migrate=true --offline
+Environment=IPFS_PROFILE=server
+Network=d1zzy-network.network
+NetworkAlias=ipfs
+Volume=d1zzy-ipfsdata.volume:/data/ipfs
+HealthCmd=ipfs id
+HealthInterval=15s
+HealthStartPeriod=30s
+Notify=healthy
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

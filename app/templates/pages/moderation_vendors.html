@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Pending Vendor Applications · D1zzy Market{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+  <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+    <h1 class="text-2xl font-semibold">Pending Vendor Applications</h1>
+  </div>
+
+  {% if pending %}
+  <div class="space-y-4">
+    {% for v in pending %}
+    <article class="card p-5 space-y-4">
+      <header class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <a href="/u/{{ v.handle }}" class="font-semibold text-lg text-text hover:text-accent">@{{ v.handle }}</a>
+          <span class="ml-2 text-xs text-muted">Applied {{ v.created_at | ago }}</span>
+        </div>
+        {% if v.vendor_application_submitted and not v.vendor_application_reviewed %}
+        <span class="badge badge-warning">Pending Review</span>
+        {% endif %}
+      </header>
+
+      {% if v.vendor_application_notes %}
+      <div class="card bg-bg p-4 rounded-lg border border-border">
+        <p class="text-sm text-muted mb-2">Vendor Bio / Application Notes:</p>
+        <p class="whitespace-pre-wrap text-gray-300">{{ v.vendor_application_notes }}</p>
+      </div>
+      {% endif %}
+
+      <div class="flex flex-wrap gap-2">
+        <form action="/moderation/vendors/{{ v.id }}/approve" method="post" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn-primary" type="submit">Approve</button>
+        </form>
+        <details class="flex-1">
+          <summary class="btn-ghost cursor-pointer">Reject</summary>
+          <form action="/moderation/vendors/{{ v.id }}/reject" method="post" class="mt-2 space-y-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="reason" value="Rejected by moderator" required>
+            <textarea class="input" name="reason" rows="3" placeholder="Reason for rejection (required)" required></textarea>
+            <button class="btn-danger" type="submit">Confirm Reject</button>
+          </form>
+        </details>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span></span>
+    <p class="empty-state-title">No pending applications</p>
+    <p class="empty-state-text">All vendor applications have been reviewed.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

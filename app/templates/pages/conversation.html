@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}@{{ other.handle }} · Messages{% endblock %}
+{% block head %}
+{# No-JS fallback: reload every 15 s to pick up new messages. Ignored when JS is on. #}
+<noscript><meta http-equiv="refresh" content="15"></noscript>
+{% endblock %}
+{% block content %}
+{% set reason = "you have not set up passphrase keys" if not user.exchange_pubkey else ("@" ~ other.handle ~ " has not set up keys yet") %}
+<div class="conversation-page mx-auto max-w-3xl"
+     x-data="chat" data-conv-id="{{ conv.id }}" data-is-alice="{{ '1' if is_alice else '0' }}"
+     data-other-pk="{{ other.exchange_pubkey | b64 }}" data-e2e="{{ '1' if e2e_possible else '0' }}"
+     data-e2e-disabled="{{ '0' if e2e_possible else '1' }}"
+     data-reason="{{ reason }}" data-last-id="{{ messages[-1].id if messages else 0 }}">
+
+  <div class="conversation-header flex flex-wrap items-baseline justify-between gap-2 mb-4">
+    <h1 class="text-xl font-semibold">@{{ other.handle }}</h1>
+    {% if title %}
+    <a href="/listings/{{ conv.listing_id }}" class="text-sm text-accent">{{ title }}</a>
+    {% endif %}
+  </div>
+
+  <div class="card space-y-3">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <span class="text-sm text-muted" x-text="status">
+        {% if e2e_possible %}Encrypted messages need JavaScript and your unlocked keys. Without JavaScript you can still send messages, but they are not end-to-end encrypted.{% else %}Not end-to-end encrypted: {{ reason }}.{% endif %}
+      </span>
+      <button class="btn-ghost btn-sm" type="button" x-show="locked" x-cloak x-on:click="unlock">
+        <span class="material-symbols-rounded icon-sm" aria-hidden="true">lock_open</span> Unlock keys
+      </button>
+    </div>
+
+    <p class="text-xs text-warning" x-show="e2eDisabled" x-cloak>
+      <span class="material-symbols-rounded icon-xs" aria-hidden="true">warning</span> Messages sent without JavaScript or unlocked keys are encrypted at rest on the server but are <strong>not</strong> end-to-end encrypted.
+    </p>
+
+    {% if safety_number %}
+    <details class="text-xs text-muted">
+      <summary class="cursor-pointer">Verify this chat</summary>
+      <p class="mt-2">Read these digits to @{{ other.handle }} over a separate channel, a call or in person. If they match, the keys have not been swapped.</p>
+      <p class="mt-1 font-mono break-all" data-safety-number>{{ safety_number }}</p>
+    </details>
+    {% endif %}
+  </div>
+
+  <div id="chat-log" class="chat-log flex-1" role="log" aria-live="polite" aria-atomic="false">
+    {% for msg in messages %}{% with m=msg %}{% include "partials/message-bubble.html" %}{% endwith %}{% endfor %}
+    {% if not messages %}
+    <div class="empty-state flex-1">
+      <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">chat_bubble_outline</span></span>
+      <p class="empty-state-title">No messages yet</p>
+      <p class="empty-state-text">Say hello!</p>
+    </div>
+    {% endif %}
+    <span id="end"></span>
+  </div>
+
+  <form action="/messages/{{ conv.id }}/send" method="post" class="flex gap-2 mt-4" x-on:submit="send">
+    {{ m.csrf() }}
+    <div class="flex-1">
+      <textarea class="input" name="text" rows="2" maxlength="4000" required placeholder="Write a message" x-ref="input" aria-label="Message"></textarea>
+    </div>
+    <button class="btn-primary btn-lg" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">send</span></button>
+  </form>
+
+  <noscript>
+    <p class="text-xs text-warning mt-3"><span class="material-symbols-rounded icon-xs" aria-hidden="true">warning</span> JavaScript is off: messages you send now are encrypted at rest on the server but are <strong>not</strong> end-to-end encrypted. This page refreshes every 15 seconds.</p>
+  </noscript>
+</div>
+
+<template id="bubble-tpl">
+  <div class="message-bubble" data-mode="ratchet">
+    <div class="message-bubble-text whitespace-pre-wrap break-words"></div>
+    <div class="message-bubble-meta">
+      <span class="msg-meta"></span>
+      <span>now</span>
+    </div>
+    <details class="report">
+      <summary class="btn-ghost btn-sm" aria-label="Report this message">
+        <span class="material-symbols-rounded icon-sm" aria-hidden="true">flag</span> Report
+      </summary>
+      <form action="/reports" method="post" class="report-panel space-y-3"
+            x-data="signedForm" data-kind="report" data-api="/api/reports" data-next="/messages/{{ conv.id }}?m=reported">
+        <p class="report-panel-title"><span class="material-symbols-rounded icon-sm text-error" aria-hidden="true">flag</span>Report this message</p>
+        {{ m.csrf() }}
+        <input type="hidden" name="target_type" value="message">
+        <input type="hidden" name="target_id" value="">
+        <input type="hidden" name="back" value="/messages/{{ conv.id }}">
+        {# Cloned per message by app.js, so no ids: the labels wrap their controls. #}
+        <label class="field">
+          <span class="field-label">Reason</span>
+          <select class="input" name="reason" required>
+            <option value="harassment">Harassment</option>
+            <option value="scam">Scam or fraud</option>
+            <option value="spam">Spam</option>
+            <option value="illegal">Illegal content</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">Details</span>
+          <textarea class="input" name="details" rows="2" maxlength="4000" placeholder="Details for moderators (optional)"></textarea>
+        </label>
+        <button class="btn-danger w-full" type="submit">Send report</button>
+      </form>
+    </details>
+  </div>
+</template>
+{% endblock %}

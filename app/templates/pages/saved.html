@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}Saved Items · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-semibold">Saved Items</h1>
+</div>
+
+{% if listings %}
+<div class="search-results">
+  {% for v in listings %}
+  {% include "partials/listing-card.html" %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">bookmark</span></span>
+  <p class="empty-state-title">No saved items yet</p>
+  <p class="empty-state-text">Save listings you like to find them here later.</p>
+  <a class="btn-primary" href="/listings">Start browsing</a>
+</div>
+{% endif %}
+{% endblock %}

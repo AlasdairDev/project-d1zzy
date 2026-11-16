@@ -1,0 +1,11 @@
+{# `path` comes from base.html, or from the badges route when HTMX refreshes this. #}
+<a class="nav-link" href="/messages" aria-label="Messages{{ ' (' ~ unread ~ ' unread)' if unread }}"{% if path.startswith("/messages") %} aria-current="page"{% endif %}>
+  <span class="material-symbols-rounded" aria-hidden="true">chat</span>
+  <span class="nav-label">Messages</span>
+  {% if unread %}<span class="nav-badge">{{ unread }}</span>{% endif %}
+</a>
+<a class="nav-link" href="/offers" aria-label="Offers{{ ' (' ~ notes ~ ' new)' if notes }}"{% if path.startswith("/offers") %} aria-current="page"{% endif %}>
+  <span class="material-symbols-rounded" aria-hidden="true">handshake</span>
+  <span class="nav-label">Offers</span>
+  {% if notes %}<span class="nav-badge">{{ notes }}</span>{% endif %}
+</a>

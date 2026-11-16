@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Browse · D1zzy Market{% endblock %}
+{% block scripts %}<script src="/static/vendor/fuse.min.js" defer></script>{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center gap-2">
+  <a class="tab {{ 'tab-active' if not category }}" href="/listings">All</a>
+  {% for c in categories %}<a class="tab capitalize {{ 'tab-active' if c == category }}" href="/listings?category={{ c }}">{{ c }}</a>{% endfor %}
+</div>
+
+<div x-data="search" class="space-y-4">
+  {# With JS: fuzzy search runs locally over the decrypted index. Without JS: normal GET form, server filters. #}
+  <form action="/listings" method="get" class="flex gap-2" x-on:submit.prevent="onInput">
+    {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+    <div class="input-wrapper flex-1">
+      <span class="material-symbols-rounded icon-md" aria-hidden="true">search</span>
+      <input class="input" type="search" name="q" value="{{ q }}" placeholder="Search titles and descriptions"
+             x-ref="q" x-on:input="onInput" x-on:focus="load" aria-label="Search">
+    </div>
+    <button class="btn-ghost" type="submit">Search</button>
+  </form>
+  <p class="text-xs text-muted" x-text="note">
+    {% if q %}Without JavaScript, your search query is sent to the server.{% endif %}
+  </p>
+
+  {# Filter Panel #}
+  <details class="filter-panel">
+    <summary class="btn-ghost btn-sm flex items-center gap-2">
+      <span class="material-symbols-rounded icon-sm" aria-hidden="true">tune</span>
+      Filters
+    </summary>
+    <form action="/listings" method="get" class="mt-4 space-y-4">
+      {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+      {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="field">
+          <label for="f-price_min" class="field-label">Min Price</label>
+          <input id="f-price_min" class="input" type="number" name="price_min" value="{{ filters.price_min or '' }}" placeholder="Min" min="0" step="100">
+        </div>
+        <div class="field">
+          <label for="f-price_max" class="field-label">Max Price</label>
+          <input id="f-price_max" class="input" type="number" name="price_max" value="{{ filters.price_max or '' }}" placeholder="Max" min="0" step="100">
+        </div>
+        <div class="field">
+          <label for="f-condition" class="field-label">Condition</label>
+          <select id="f-condition" class="input" name="condition">
+            <option value="">Any condition</option>
+            {% for c in conditions %}<option value="{{ c }}" {{ 'selected' if c == filters.condition else '' }}>{{ c|capitalize }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-location" class="field-label">Location</label>
+          <input id="f-location" class="input" type="text" name="location" value="{{ filters.location or '' }}" placeholder="City, region..." maxlength="80">
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 pt-2 border-t border-border">
+        <button class="btn-primary" type="submit">Apply filters</button>
+        <a href="/listings{% if category %}?category={{ category }}{% endif %}" class="btn-ghost">Clear filters</a>
+      </div>
+    </form>
+  </details>
+
+  <div x-show="inactive">
+    {% if q %}<h1 class="mb-4">Results for "{{ q }}"</h1>{% endif %}
+    {% if listings %}
+    <div class="search-results">
+      {% include "partials/listing-page.html" %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">search_off</span></span>
+      <p class="empty-state-title">Nothing here yet</p>
+      <p class="empty-state-text">{% if q %}No listings match "{{ q }}".{% else %}No listings in this category yet.{% endif %}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<template id="card-tpl">
+  <a class="listing-card" href="">
+    <div class="listing-card-media">
+      <img alt="" loading="lazy" class="loaded">
+    </div>
+    <div class="listing-card-content">
+      <p data-f="title" class="listing-card-title"></p>
+      <p data-f="price" class="listing-card-price"></p>
+      <div data-f="meta" class="listing-card-meta"></div>
+    </div>
+  </a>
+</template>
+{% endblock %}

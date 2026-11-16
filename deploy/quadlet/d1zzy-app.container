@@ -1,0 +1,28 @@
+[Unit]
+Description=D1zzy Market - web app
+Requires=d1zzy-db.service d1zzy-redis.service d1zzy-ipfs.service
+After=d1zzy-db.service d1zzy-redis.service d1zzy-ipfs.service
+
+[Container]
+ContainerName=d1zzy-app
+# Built by `just build` (podman-compose); `just quadlet-install` builds it first.
+Image=localhost/project-d1zzy-market:dev
+Exec=web
+Network=d1zzy-network.network
+PodmanArgs=--security-opt=no-new-privileges --cap-drop=ALL --read-only --tmpfs=/tmp:size=64m --pids-limit=256 --memory=512m
+NetworkAlias=app
+PublishPort=127.0.0.1:8000:8000
+EnvironmentFile=%h/.config/d1zzy/env
+Environment=TOR_HOSTNAME_FILE=/run/tor-export/hostname
+Volume=d1zzy-torexport.volume:/run/tor-export:ro
+HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
+HealthInterval=15s
+HealthStartPeriod=30s
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

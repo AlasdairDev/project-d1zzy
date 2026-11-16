@@ -1,0 +1,37 @@
+# Throwaway services for running the test-suite inside containers (`just test-container`).
+# Postgres runs on tmpfs; everything is removed afterwards. The Monero multisig test needs to
+# start its own containers, so it is skipped here; run `just test` on the host for it.
+name: project-d1zzy-market-test
+
+services:
+  test-db:
+    image: docker.io/library/postgres:16-alpine
+    environment: {POSTGRES_USER: test, POSTGRES_PASSWORD: test, POSTGRES_DB: test}
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U test -d test"], interval: 2s, timeout: 3s, retries: 30}
+
+  test-redis:
+    image: docker.io/library/redis:7-alpine
+    healthcheck: {test: ["CMD", "redis-cli", "ping"], interval: 2s, timeout: 3s, retries: 30}
+
+  test-ipfs:
+    image: docker.io/ipfs/kubo:v0.33.0
+    command: ["daemon", "--migrate=true", "--offline"]
+    healthcheck: {test: ["CMD", "ipfs", "id"], interval: 3s, timeout: 5s, retries: 40}
+
+  tests:
+    build:
+      context: ../..
+      dockerfile: ../docker/Dockerfile
+      target: test
+    image: localhost/project-d1zzy-market:test
+    environment:
+      TEST_DATABASE_URL: postgresql+asyncpg://test:test@test-db:5432/test
+      TEST_REDIS_URL: redis://test-redis:6379/0
+      TEST_IPFS_API_URL: http://test-ipfs:5001/api/v0
+      SKIP_MONERO_TESTS: "1"
+    command: ["pytest", "-p", "no:cacheprovider"]
+    depends_on:
+      test-db: {condition: service_healthy}
+      test-redis: {condition: service_healthy}
+      test-ipfs: {condition: service_healthy}

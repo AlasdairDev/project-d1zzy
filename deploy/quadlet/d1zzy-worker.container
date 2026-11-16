@@ -1,0 +1,18 @@
+[Unit]
+Description=D1zzy Market - background worker (Arq)
+Requires=d1zzy-app.service
+After=d1zzy-app.service
+
+[Container]
+ContainerName=d1zzy-worker
+Image=localhost/project-d1zzy-market:dev
+Exec=worker
+Network=d1zzy-network.network
+PodmanArgs=--security-opt=no-new-privileges --cap-drop=ALL --read-only --tmpfs=/tmp:size=64m --pids-limit=256 --memory=512m
+EnvironmentFile=%h/.config/d1zzy/env
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

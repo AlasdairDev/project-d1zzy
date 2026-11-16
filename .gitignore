@@ -1,0 +1,48 @@
+# --- Secrets and local configuration --------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+*.secret
+
+# --- Local state, databases and generated data -----------------------------------------
+.venv/
+venv/
+.tools/
+tor-data/
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bak
+backups/
+logs/
+*.log
+*.onion
+deploy/compose/*.override.yml
+deploy/compose/*.override.yaml
+
+# --- Python ----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Editors and operating systems -----------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# --- Node tooling ----------------------------------------------------------------------
+node_modules/

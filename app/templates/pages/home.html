@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-inner">
+    <span class="hero-eyebrow"><span class="material-symbols-rounded" aria-hidden="true">verified_user</span>Signed listings · E2E chat · Tor-first</span>
+    <h1 id="hero-title">Buy and sell, pseudonymously.</h1>
+    <p class="hero-lead">Listings are signed by their sellers and verified in your browser. Chats are end-to-end encrypted with the Double Ratchet. Pay by GCash, Maya, card or cash on delivery.</p>
+    <p class="hero-note">Moderated marketplace: prohibited items are removed, and you can report anything that breaks the rules.</p>
+    <div class="hero-actions">
+      <a class="btn-primary btn-lg" href="/listings"><span class="material-symbols-rounded icon-sm" aria-hidden="true">storefront</span>Browse listings</a>
+      {% if user and user.is_vendor %}
+        <a class="btn-ghost btn-lg" href="/listings/new">Sell something</a>
+      {% elif user %}
+        <a class="btn-ghost btn-lg" href="/settings#vendor">Become a vendor</a>
+      {% else %}
+        <a class="btn-ghost btn-lg" href="/register">Create an account</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="home-section" aria-labelledby="categories-title">
+  <div class="section-header">
+    <h2 id="categories-title" class="text-xl font-semibold">Categories</h2>
+    <a href="/listings" class="section-link">See all →</a>
+  </div>
+  <div class="category-grid">
+    {% for c in categories %}
+    <a href="/listings?category={{ c }}" class="category-card">
+      <span class="category-icon material-symbols-rounded" aria-hidden="true">{{ category_icons.get(c, 'category') }}</span>
+      <span class="category-text">
+        <span class="category-name">{{ c }}</span>
+        <span class="category-count">{{ counts.get(c, 0) }} listing{{ "" if counts.get(c, 0) == 1 else "s" }}</span>
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="home-section" aria-labelledby="recent-title">
+  <div class="section-header">
+    <h2 id="recent-title" class="text-xl font-semibold">Recent listings</h2>
+    <a href="/listings" class="section-link">See all →</a>
+  </div>
+  {% if listings %}
+  <div class="search-results">
+    {% for v in listings %}{% include "partials/listing-card.html" %}{% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">store</span></span>
+    <p class="empty-state-title">No listings yet</p>
+    <p class="empty-state-text">Be the first to list something!</p>
+    <a class="btn-primary" href="/listings/new">Create a listing</a>
+  </div>
+  {% endif %}
+</section>
+<section class="home-section" aria-labelledby="discussions-title">
+  <div class="section-header">
+    <h2 id="discussions-title" class="text-xl font-semibold">Community Discussions</h2>
+    <a href="/discussions" class="section-link">See all →</a>
+  </div>
+  {% if discussions %}
+  <div class="discussion-grid">
+    {% for d in discussions %}
+    <article class="discussion-card">
+      <header class="flex flex-wrap items-start justify-between gap-2 mb-2">
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-baseline gap-2">
+            <span class="badge badge-{{ {'question': 'warning', 'review': 'info', 'announcement': 'warning', 'discussion': 'accent'}[d.type] }}">{{ d.type|capitalize }}</span>
+            {% if d.is_pinned %}<span class="badge badge-accent">Pinned</span>{% endif %}
+            {% if d.is_locked %}<span class="badge badge-warning">Locked</span>{% endif %}
+          </div>
+          <h3 class="text-lg font-semibold mt-1 truncate">
+            {% if d.type == 'review' and d.rating %}
+              <span class="text-amber-400 mr-1">{{ '★' * d.rating }}</span>
+            {% endif %}
+            <a href="/discussions/{{ d.id }}" class="text-text hover:text-accent no-underline">{{ d.title or "Discussion" }}</a>
+          </h3>
+          <p class="text-sm text-muted mt-1">
+            by <a href="/u/{{ d.author.handle }}" class="text-accent hover:no-underline">@{{ d.author.handle }}</a>
+            · {{ d.created_at | ago }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1 text-lg">
+            <span class="material-symbols-rounded text-accent" aria-hidden="true">thumb_up</span>
+            <span class="font-semibold">{{ d.upvotes }}</span>
+            <span class="material-symbols-rounded text-muted" aria-hidden="true">thumb_down</span>
+            <span class="font-semibold">{{ d.downvotes }}</span>
+          </div>
+          <div class="flex items-center gap-1 text-muted text-sm">
+            <span class="material-symbols-rounded" aria-hidden="true">chat_bubble</span>
+            <span>{{ d.reply_count }}</span>
+          </div>
+      </div>
+    </header>
+
+    {% if d.content %}
+    <div class="prose text-sm text-muted max-h-32 overflow-hidden mt-3">
+      <p class="line-clamp-2 whitespace-pre-wrap">{{ d.content | truncate(200) }}</p>
+    </div>
+    {% endif %}
+
+    <footer class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-border">
+      <div class="flex items-center gap-2">
+        <a href="/discussions/{{ d.id }}" class="btn-ghost btn-sm"><span class="material-symbols-rounded icon-sm" aria-hidden="true">chat_bubble</span> {{ d.reply_count }} replies</a>
+        <span class="badge badge-{{ {'question': 'warning', 'review': 'info', 'announcement': 'warning', 'discussion': 'accent'}[d.type] }}">{{ d.type|capitalize }}</span>
+      </div>
+    </footer>
+  </article>
+  {% endfor %}
+  </div>
+
+  <div class="text-center mt-6">
+    <a href="/discussions" class="btn-primary">View all discussions</a>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">chat_bubble_outline</span></span>
+    <p class="empty-state-title">No discussions yet</p>
+    <p class="empty-state-text">Be the first to start a discussion!</p>
+    <a class="btn-primary" href="/discussions">Start a discussion</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

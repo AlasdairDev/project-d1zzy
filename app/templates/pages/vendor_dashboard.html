@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}Vendor dashboard · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl font-semibold">Vendor dashboard</h1>
+  {% if user.is_vendor %}<a class="btn-primary" href="/listings/new"><span class="material-symbols-rounded icon-sm" aria-hidden="true">add</span> New listing</a>{% endif %}
+</div>
+
+{% if not user.is_vendor %}
+<div class="empty-state">
+  <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">store</span></span>
+  <p class="empty-state-title">Not a vendor yet</p>
+  <p class="empty-state-text">Apply in Settings to start selling.</p>
+  <a class="btn-primary" href="/settings#vendor">Apply now</a>
+</div>
+{% else %}
+<div class="stats-grid mb-8">
+  <div class="card p-5 text-center">
+    <div class="text-sm text-muted">Active listings</div>
+    <div class="text-3xl font-semibold mt-1">{{ listings | length }}</div>
+  </div>
+  <div class="card p-5 text-center">
+    <div class="text-sm text-muted">Sales</div>
+    <div class="text-3xl font-semibold mt-1">{{ sales | length }}</div>
+  </div>
+  <div class="card p-5 text-center">
+    <div class="text-sm text-muted">Payouts owed</div>
+    {% for cur, cents in owed.items() %}
+    <div class="text-2xl font-semibold text-accent mt-1">{{ cents | money(cur) }}</div>
+    {% else %}
+    <div class="text-2xl font-semibold mt-1">—</div>
+    {% endfor %}
+    <p class="mt-2 text-xs text-muted">Online payments settle to the market's PayMongo account; automated payouts are not enabled yet. Cash on delivery is settled directly between buyer and seller.</p>
+  </div>
+</div>
+
+<section class="mb-10">
+  <div class="flex items-baseline justify-between mb-4">
+    <h2 class="text-xl font-semibold">My listings</h2>
+    <a class="btn-ghost btn-sm" href="/listings/new"><span class="material-symbols-rounded icon-sm" aria-hidden="true">add</span> New listing</a>
+  </div>
+  {% if listings %}
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Price</th>
+          <th>Status</th>
+          <th>Reports</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in listings %}
+        <tr>
+          <td class="p-4"><a href="/listings/{{ v.id }}" class="font-medium">{{ v.plain.title if v.plain else "(unreadable)" }}</a></td>
+          <td class="p-4">{{ v.plain.price_cents | money(v.plain.currency) if v.plain }}</td>
+          <td class="p-4">{{ m.status(v.listing.status) }}</td>
+          <td class="p-4 text-center">{{ v.listing.report_count }}</td>
+          <td class="p-4 text-right">
+            {% if v.listing.status in ("active", "expired") %}
+            <a href="/listings/{{ v.id }}/edit" class="btn-ghost btn-sm"><span class="material-symbols-rounded icon-sm" aria-hidden="true">edit</span></a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ m.empty("No listings yet.", "/listings/new", "Create one →", icon="add") }}
+  {% endif %}
+</section>
+
+<section>
+  <h2 class="text-xl font-semibold mb-4">Sales</h2>
+  {% if sales %}
+  <div class="space-y-3">
+    {% for row in sales %}{% with tab="selling", rated=[] %}{% include "partials/offer-card.html" %}{% endwith %}{% endfor %}
+  </div>
+  {% else %}
+  {{ m.empty("No sales yet.", icon="local_shipping") }}
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

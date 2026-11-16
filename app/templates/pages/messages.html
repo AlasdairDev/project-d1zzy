@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Messages · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold">Messages</h1>
+</div>
+
+{% if rows %}
+<div class="card overflow-hidden">
+  {% for r in rows %}
+  <a href="/messages/{{ r.conv.id }}" class="flex items-center justify-between gap-4 p-4 no-underline hover:bg-surface-hover border-b border-border last:border-0" aria-label="Conversation with @{{ r.other.handle }}">
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      <span class="avatar avatar-md" aria-hidden="true">{{ r.other.handle[:1].upper() }}</span>
+      <div class="min-w-0">
+        <p class="font-medium truncate">@{{ r.other.handle }}</p>
+        <p class="text-sm text-muted truncate">{{ r.title or "General conversation" }}</p>
+      </div>
+    </div>
+    {% if r.unread %}
+    <span class="nav-badge">{{ r.unread }} new</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">chat_bubble_outline</span></span>
+  <p class="empty-state-title">No conversations yet</p>
+  <p class="empty-state-text">Use "Message" on a listing to contact a seller.</p>
+  <a class="btn-primary" href="/listings">Browse listings</a>
+</div>
+{% endif %}
+{% endblock %}

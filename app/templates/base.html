@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"selfRequestsOnly":true}'>
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}D1zzy Market{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="preload" href="/static/vendor/fonts/MaterialSymbolsRounded.woff2" as="font" type="font/woff2" crossorigin>
+  {# Tiny and blocking on purpose: sets html.js / html.icons-ok before first paint. #}
+  <script src="/static/js/boot.js"></script>
+  <link rel="icon" href="data:,">
+  {% block head %}{% endblock %}
+  {# All scripts are local files: no CDN requests, nothing inline (strict CSP). #}
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/vendor/libsodium.wasm.js" defer></script>
+  <script src="/static/js/crypto.js" defer></script>
+  <script src="/static/js/ratchet.js" defer></script>
+  {% block scripts %}{% endblock %}
+  <script src="/static/js/app.js" defer></script>
+  <script src="/static/vendor/alpine.min.js" defer></script>
+</head>
+<body class="page min-h-screen flex flex-col"
+      hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+      {% if user %}data-user-id="{{ user.id }}" data-user-email="{{ user.email }}" data-signing-pubkey="{{ user.signing_pubkey | b64 }}"{% endif %}>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  {% set path = request.url.path %}
+  {% macro nav_link(href, icon, label, active=false) -%}
+    <a class="nav-link" href="{{ href }}" aria-label="{{ label }}"{% if active %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded" aria-hidden="true">{{ icon }}</span>
+      <span class="nav-label">{{ label }}</span>
+    </a>
+  {%- endmacro %}
+  <header class="site-header">
+    <nav class="container nav-inner" aria-label="Main navigation">
+      <a href="/" class="brand" aria-label="D1zzy Market home">D1zzy<span class="text-accent">.</span></a>
+
+      <form action="/listings" method="get" class="nav-search search-form" role="search">
+        <label class="input-wrapper">
+          <span class="material-symbols-rounded" aria-hidden="true">search</span>
+          <input class="input" type="search" name="q" placeholder="Search listings" aria-label="Search listings"
+                 value="{{ request.query_params.get('q', '') if path == '/listings' else '' }}">
+        </label>
+      </form>
+
+      <div class="nav-actions">
+        {{ nav_link("/listings", "storefront", "Browse", path.startswith("/listings") and path != "/listings/new") }}
+        {% if user %}
+          {% if user.is_vendor %}{{ nav_link("/listings/new", "add_circle", "Sell", path == "/listings/new") }}{% endif %}
+          <span class="nav-badges" hx-get="/partials/badges" hx-trigger="every 30s" hx-swap="innerHTML">
+            {% include "partials/badges.html" %}
+          </span>
+          <details class="nav-menu">
+            <summary class="nav-link" aria-label="Account menu">
+              <span class="material-symbols-rounded" aria-hidden="true">account_circle</span>
+              <span class="nav-label">@{{ user.handle }}</span>
+              <span class="material-symbols-rounded nav-menu-caret" aria-hidden="true">expand_more</span>
+            </summary>
+            <div class="nav-menu-panel">
+              <div class="nav-menu-header">Signed in as<strong>@{{ user.handle }}</strong></div>
+              <a class="nav-menu-item" href="/u/{{ user.handle }}"><span class="material-symbols-rounded" aria-hidden="true">person</span>Profile</a>
+              {% if user.is_vendor %}<a class="nav-menu-item" href="/vendor"><span class="material-symbols-rounded" aria-hidden="true">dashboard</span>Vendor dashboard</a>{% endif %}
+              {% if user.is_superuser %}<a class="nav-menu-item" href="/moderation"><span class="material-symbols-rounded" aria-hidden="true">gavel</span>Moderation</a>{% endif %}
+              <a class="nav-menu-item" href="/settings"><span class="material-symbols-rounded" aria-hidden="true">settings</span>Settings</a>
+              <div class="nav-menu-divider" role="separator"></div>
+              <form action="/logout" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="nav-menu-item" type="submit"><span class="material-symbols-rounded" aria-hidden="true">logout</span>Log out</button>
+              </form>
+            </div>
+          </details>
+        {% else %}
+          {{ nav_link("/login", "login", "Log in", path == "/login") }}
+          <a class="btn-primary" href="/register" aria-label="Create account">
+            <span class="material-symbols-rounded icon-sm" aria-hidden="true">person_add</span>
+            <span class="btn-label">Sign up</span>
+          </a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container page-content flex-1">
+    {% if flash %}
+      <div class="flash flash-{{ flash[0] }}" role="status">
+        <span class="material-symbols-rounded icon-sm" aria-hidden="true">{{ {"ok": "check_circle", "warn": "warning", "err": "error"}[flash[0]] }}</span>
+        <span>{{ flash[1] }}</span>
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>D1zzy Market: pseudonymous P2P marketplace. No trackers, no third-party requests. Works with JavaScript disabled.</span>
+      {% if onion %}<span class="footer-onion"><span class="material-symbols-rounded icon-sm" aria-hidden="true">vpn_lock</span><code>{{ onion }}</code></span>{% endif %}
+    </div>
+  </footer>
+
+  <div id="toasts" aria-live="polite"></div>
+
+  {% if user and user.signing_pubkey %}
+  <dialog id="unlock-dialog" aria-labelledby="unlock-title">
+    <form method="dialog" class="space-y-4">
+      <div class="flex items-center justify-center">
+        <span class="material-symbols-rounded icon-xl text-accent" aria-hidden="true">lock</span>
+      </div>
+      <div class="text-center">
+        <h2 id="unlock-title" class="text-lg font-semibold">Unlock your keys</h2>
+        <p class="text-sm text-muted mt-1">Your passphrase derives your signing and encryption keys in this browser. It is never sent to the server.</p>
+      </div>
+      <div class="field">
+        <label for="unlock-pass" class="field-label">Passphrase</label>
+        <input id="unlock-pass" class="input" type="password" autocomplete="off" required aria-describedby="unlock-hint">
+        <p id="unlock-hint" class="field-hint">12+ characters. A few random words is best.</p>
+      </div>
+      <p class="error text-sm text-error" role="alert"></p>
+      <div class="flex justify-end gap-2">
+        <button class="btn-ghost" type="submit" value="cancel" formnovalidate>Skip</button>
+        <button class="btn-primary" type="submit" value="ok">Unlock</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
+
+  {% block body_end %}{% endblock %}
+</body>
+</html>

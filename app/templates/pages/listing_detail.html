@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% set p = view.plain %}{% set lst = view.listing %}
+{% block title %}{{ p.title if p else "Listing" }} · D1zzy Market{% endblock %}
+{% block content %}
+{% if not p %}
+<div class="empty-state">
+  <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">error</span></span>
+  <p class="empty-state-title">Listing unavailable</p>
+  <p class="empty-state-text">This listing could not be decrypted or failed validation.</p>
+</div>
+{% else %}
+<div class="listing-detail">
+  <div class="space-y-5">
+    {% if p.images %}
+    <div class="media-gallery">
+      {% for img in p.images %}
+      <img src="/media/{{ lst.id }}/{{ loop.index0 }}" alt="Photo {{ loop.index }}" class="w-full rounded-lg bg-surface-hover object-cover loaded">
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="placeholder aspect-video rounded-xl">
+      <span class="material-symbols-rounded" aria-hidden="true">image</span>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-3">Description</h2>
+      <p class="whitespace-pre-wrap text-muted">{{ p.desc or "No description." }}</p>
+    </div>
+  </div>
+
+  <aside class="space-y-4">
+    <div class="card space-y-4">
+      {% if lst.status != "active" %}
+      <div class="flex items-center gap-2">{{ m.status(lst.status) }}</div>
+      {% endif %}
+      <h1 class="text-2xl font-semibold">{{ p.title }}</h1>
+      <div class="text-3xl font-semibold text-accent">{{ p.price_cents | money(p.currency) }}</div>
+      <div class="flex flex-wrap gap-2">
+        <span class="badge badge-info capitalize">{{ p.category }}</span>
+        <span class="badge">{{ p.condition.replace("_", " ") }}</span>
+        {% if p.location_approx %}<span class="badge"><span class="material-symbols-rounded icon-xs" aria-hidden="true">location_on</span> {{ p.location_approx }}</span>{% endif %}
+        {% if p.expires_at %}<span class="badge"><span class="material-symbols-rounded icon-xs" aria-hidden="true">schedule</span> until {{ p.expires_at }}</span>{% endif %}
+      </div>
+      {{ m.sig_badge("listing", lst.listing_ct, lst.sig, view.seller.signing_pubkey, view.seller.handle, view.signed_by) }}
+    </div>
+
+    <div class="card flex items-center justify-between flex-wrap gap-3">
+      <div class="flex flex-col gap-1">
+        <a href="/u/{{ view.seller.handle }}" class="font-medium">@{{ view.seller.handle }}</a>
+        {% if view.seller.is_vendor %}
+        <span class="vendor-badge"><span class="material-symbols-rounded icon-xs" aria-hidden="true">verified</span> Vendor</span>
+        {% endif %}
+        <div>{% with score=rating_avg, count=rating_count %}{% include "partials/rating-stars.html" %}{% endwith %}</div>
+      </div>
+      {% if user and user.id != view.seller.id and lst.status == "active" %}
+      <form action="/listings/{{ lst.id }}/contact" method="post">{{ m.csrf() }}<button class="btn-primary" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">chat</span> Message</button></form>
+      {% endif %}
+    </div>
+
+    {% if user and user.id == view.seller.id %}
+    <div class="card flex flex-wrap gap-2">
+      <a class="btn-ghost" href="/listings/{{ lst.id }}/edit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">edit</span> Edit</a>
+      {{ m.action("/listings/" ~ lst.id ~ "/delete", "Remove listing", "btn-danger", icon="delete") }}
+    </div>
+    {% elif user and lst.status == "active" %}
+      {% if my_offer and my_offer.status in ("pending", "accepted", "paid", "disputed") %}
+      <div class="card">
+        <p class="text-sm">You have an offer on this listing: {{ m.status(my_offer.status) }} <a href="/offers" class="text-accent">View offers →</a></p>
+      </div>
+      {% else %}
+      <form class="card space-y-4" action="/listings/{{ lst.id }}/offer" method="post"
+            x-data="signedForm" data-kind="offer" data-api="/api/offers" data-next="/offers?tab=buying&m=offer_sent"
+            data-listing-id="{{ lst.id }}">
+        {{ m.csrf() }}
+        <h2 class="text-lg font-semibold">Make an offer</h2>
+        <div class="grid grid-cols-[1fr_auto] gap-3">
+          {{ m.field("amount", "Amount", "%.2f" % (p.price_cents / 100), "number", true, 'step="0.01" min="0.01"') }}
+          {{ m.select("currency", "Currency", currencies, p.currency, {"usd": "USD", "eur": "EUR", "gbp": "GBP", "sgd": "SGD", "php": "PHP", "btc": "BTC", "xmr": "XMR"}) }}
+        </div>
+        <div class="field">
+          <label for="f-payment_method" class="field-label">Pay with</label>
+          {# Philippines-only deployment: local methods. Payment happens after the seller
+             accepts, and an unconfigured provider is reported then. Unconfigured options stay
+             selectable so a fresh install can still create offers. #}
+          {% set preferred = "gcash" if payment.paymongo else "cod" %}
+          <select id="f-payment_method" class="input" name="payment_method">
+            <option value="gcash" {{ "selected" if preferred == "gcash" }}>GCash{{ " (not set up on this server)" if not payment.paymongo }}</option>
+            <option value="maya" {{ "selected" if preferred == "maya" }}>Maya{{ " (not set up on this server)" if not payment.paymongo }}</option>
+            <option value="paymongo" {{ "selected" if preferred == "paymongo" }}>Card or bank transfer (PayMongo){{ " (not set up on this server)" if not payment.paymongo }}</option>
+            <option value="cod" {{ "selected" if preferred == "cod" }}>Cash on delivery</option>
+          </select>
+          <p class="field-hint">Prices are in Philippine pesos. GCash, Maya and cards are processed by PayMongo.</p>
+        </div>
+        <div class="field">
+          <label for="f-message" class="field-label">Message to seller</label>
+          <textarea id="f-message" class="input" name="message" rows="2" maxlength="1000" placeholder="Optional message to seller"></textarea>
+        </div>
+        {{ m.field("expires_at", "Offer valid until (optional)", "", "date") }}
+        <p class="text-xs text-muted" x-text="status" aria-live="polite"></p>
+        <button class="btn-primary w-full" type="submit" x-bind:disabled="busy"><span class="material-symbols-rounded icon-sm" aria-hidden="true">send</span> Send offer</button>
+      </form>
+      {% endif %}
+    {% elif not user %}
+    <div class="card">
+      <p class="text-sm"><a href="/login?next=/listings/{{ lst.id }}" class="text-accent">Log in</a> to make an offer or message the seller.</p>
+    </div>
+    {% endif %}
+
+    {% if user and user.id != view.seller.id %}
+    {% with target_type="listing", target_id=lst.id %}{% include "partials/report-modal.html" %}{% endwith %}
+    {% endif %}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

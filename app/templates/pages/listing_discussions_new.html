@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}New Discussion · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-5">
+  <h1 class="text-2xl font-semibold">New Discussion</h1>
+
+  <form class="card space-y-5" action="/listings/{{ listing.id }}/discussions/new" method="post"
+        x-data="signedForm" data-kind="discussion" data-api="/api/discussions" data-method="POST"
+        data-next="/discussions/{id}">
+    {{ m.csrf() }}
+
+    {{ m.field("title", "Title (optional)", "", "text", false, 'maxlength="200" placeholder="What\'s your question or topic?"') }}
+
+    <div class="field">
+      <label for="f-type" class="field-label">Type</label>
+      <select id="f-type" class="input" name="type" required>
+        <option value="question">Question</option>
+        <option value="review">Review</option>
+        <option value="announcement">Announcement</option>
+        <option value="discussion" selected>General Discussion</option>
+      </select>
+    </div>
+
+    {% if rating %}
+    <div class="field">
+      <label for="f-rating" class="field-label">Rating (1-5)</label>
+      <select id="f-rating" class="input" name="rating">
+        <option value="">No rating</option>
+        <option value="5">★★★★★ Excellent</option>
+        <option value="4">★★★★☆ Good</option>
+        <option value="3">★★★☆☆ Average</option>
+        <option value="2">★★☆☆☆ Poor</option>
+        <option value="1">★☆☆☆☆ Terrible</option>
+      </select>
+    </div>
+    {% endif %}
+
+    <div class="field">
+      <label for="f-content" class="field-label">Content</label>
+      <textarea id="f-content" class="input" name="content" rows="8" maxlength="10000" required placeholder="Share your question, review, or thoughts..."></textarea>
+      <p class="field-hint">Supports markdown-style formatting. Be respectful and helpful.</p>
+    </div>
+
+    <p class="text-xs text-muted">
+      With your keys unlocked, the discussion is encrypted and signed in your browser. Without JavaScript, the server encrypts it and signs on your behalf (shown as "server-signed").
+    </p>
+
+    <p class="text-sm text-accent" x-text="status" aria-live="polite"></p>
+    <div class="flex flex-wrap gap-2">
+      <button class="btn-primary" type="submit" x-bind:disabled="busy"><span class="material-symbols-rounded icon-sm" aria-hidden="true">send</span> Post Discussion</button>
+      <a class="btn-ghost" href="/listings/{{ listing.id }}/discussions">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

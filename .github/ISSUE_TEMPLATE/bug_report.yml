@@ -1,0 +1,33 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly.
+body:
+  - type: markdown
+    attributes:
+      value: Do not use this form for security vulnerabilities. Follow the security policy (.github/SECURITY.md) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the page or endpoint, the expected result and what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run just dev
+        2. Open ...
+        3. Click ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove tokens, keys, email addresses and IP addresses first.
+      render: shell

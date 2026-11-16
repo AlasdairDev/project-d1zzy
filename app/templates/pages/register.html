@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}Sign up · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-sm space-y-5">
+  <div class="text-center mb-4">
+    <span class="material-symbols-rounded icon-xl text-accent" aria-hidden="true">person_add</span>
+    <h1 class="text-2xl font-semibold mt-2">Create an account</h1>
+  </div>
+
+  {% if error %}<div class="flash flash-error" role="alert"><span class="material-symbols-rounded icon-sm" aria-hidden="true">error</span> {{ error }}</div>{% endif %}
+
+  <form class="card space-y-4" action="/register" method="post">
+    {{ m.csrf() }}
+    {{ m.field("email", "Email (private; used for login and recovery only)", email or "", "email", true, 'autocomplete="email"') }}
+    {{ m.field("handle", "Public handle", handle or "", "text", true, 'pattern="[a-z0-9_]{3,32}" autocomplete="username" placeholder="lowercase, digits, _"') }}
+    {{ m.field("password", "Password (10+ characters)", "", "password", true, 'minlength="10" autocomplete="new-password"') }}
+    {{ m.field("password2", "Repeat password", "", "password", true, 'minlength="10" autocomplete="new-password"') }}
+    <button class="btn-primary w-full" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">person_add</span> Sign up</button>
+  </form>
+
+  <p class="text-xs text-muted text-center">Use a throwaway email if you like. Other users only see your handle. After signing up, set an encryption passphrase in Settings to sign listings and use end-to-end encrypted chat.</p>
+  <p class="text-sm text-muted text-center">Already have an account? <a href="/login" class="text-accent">Log in</a></p>
+</div>
+{% endblock %}

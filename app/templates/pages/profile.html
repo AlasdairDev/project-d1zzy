@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}@{{ subject.handle }} · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mb-8 flex flex-wrap items-start justify-between gap-4">
+  <div class="space-y-3">
+    <h1 class="text-2xl font-semibold flex items-center gap-2">
+      @{{ subject.handle }}
+      {% if subject.is_vendor %}
+      <span class="vendor-badge"><span class="material-symbols-rounded icon-xs" aria-hidden="true">verified</span> Vendor since {{ subject.vendor_since.strftime("%b %Y") if subject.vendor_since }}</span>
+      {% endif %}
+      {% if not subject.is_active %}
+      <span class="badge badge-error"><span class="material-symbols-rounded icon-xs" aria-hidden="true">block</span> Suspended</span>
+      {% endif %}
+    </h1>
+    <div>{% with score=rating_avg, count=rating_count %}{% include "partials/rating-stars.html" %}{% endwith %}</div>
+    {% if bio %}<p class="text-muted max-w-2xl">{{ bio }}</p>{% endif %}
+    <p class="text-xs text-muted">
+      {% if subject.signing_pubkey %}Signing key: <code class="break-all">{{ subject.signing_pubkey | b64 }}</code>{% else %}No signing key published.{% endif %}
+    </p>
+  </div>
+  {% if user and user.id != subject.id %}
+  {% with target_type="user", target_id=subject.id %}{% include "partials/report-modal.html" %}{% endwith %}
+  {% endif %}
+</div>
+
+<section class="mb-10">
+  <div class="flex items-baseline justify-between mb-4">
+    <h2 class="text-xl font-semibold">Active listings</h2>
+  </div>
+  {% if listings %}
+  <div class="search-results">
+    {% for v in listings %}{% include "partials/listing-card.html" %}{% endfor %}
+  </div>
+  {% else %}
+  {{ m.empty("No active listings.", icon="store") }}
+  {% endif %}
+</section>
+
+<section>
+  <h2 class="text-xl font-semibold mb-4">Ratings</h2>
+  {% if ratings %}
+  <ul class="space-y-3">
+    {% for r in ratings %}
+    <li class="card p-4 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="flex items-center gap-2">{% with score=r.rating.score %}{% include "partials/rating-stars.html" %}{% endwith %} from <a href="/u/{{ r.rating.rater.handle }}" class="text-accent hover:no-underline">@{{ r.rating.rater.handle }}</a></span>
+        {{ m.sig_badge("rating", r.rating.rating_ct, r.rating.sig, r.rating.rater.signing_pubkey, r.rating.rater.handle, r.signed_by) }}
+      </div>
+      {% if r.plain and r.plain.note %}<p class="text-sm text-muted">“{{ r.plain.note }}”</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {{ m.empty("No ratings yet.", icon="star_border") }}
+  {% endif %}
+</section>
+{% endblock %}

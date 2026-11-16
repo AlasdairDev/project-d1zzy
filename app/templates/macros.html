@@ -1,0 +1,76 @@
+{% macro csrf() -%}
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{%- endmacro %}
+
+{% macro field(name, label, value="", type="text", required=false, attrs="", error=None) -%}
+<div class="field">
+  <label for="f-{{ name }}" class="field-label">{{ label }}</label>
+  <input id="f-{{ name }}" class="input {{ 'input-error' if error }}" type="{{ type }}" name="{{ name }}" value="{{ value }}" {{ "required" if required }} {{ attrs | safe }}>
+  {% if error %}<p class="field-error"><span class="material-symbols-rounded icon-xs" aria-hidden="true">error</span>{{ error }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro select(name, label, options, selected=None, labels=None, error=None) -%}
+<div class="field">
+  <label for="f-{{ name }}" class="field-label">{{ label }}</label>
+  <select id="f-{{ name }}" class="input {{ 'input-error' if error }}" name="{{ name }}">
+    {% for o in options %}<option value="{{ o }}" {{ "selected" if o == selected }}>{{ (labels or {}).get(o, o.replace("_", " ") | capitalize) }}</option>{% endfor %}
+  </select>
+  {% if error %}<p class="field-error"><span class="material-symbols-rounded icon-xs" aria-hidden="true">error</span>{{ error }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Small POST form with a button: works without JS. Import macros "with context". #}
+{% macro action(url, label, cls="btn-ghost", reason=false, icon=None) -%}
+<form action="{{ url }}" method="post" class="inline-flex gap-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% if reason %}<input class="input py-1 text-sm" name="reason" placeholder="Reason (logged)" required>{% endif %}
+  <button class="{{ cls }}" type="submit">
+    {% if icon %}<span class="material-symbols-rounded icon-sm" aria-hidden="true">{{ icon }}</span>{% endif %}
+    {{ label }}
+  </button>
+</form>
+{%- endmacro %}
+
+{# Signature badge: server-side verdict, re-verified client-side by the sigBadge component. #}
+{% macro sig_badge(context, ct, sig, pk, name, signed_by) -%}
+<span x-data="sigBadge" x-bind:class="cls" x-text="label"
+      class="badge sig-badge {{ 'badge-success' if signed_by == 'user' else ('badge-error' if not signed_by else 'badge-muted') }}"
+      data-context="{{ context }}" data-ct="{{ ct | b64 }}" data-sig="{{ sig | b64 }}" data-pk="{{ pk | b64 }}" data-name="{{ name }}">
+  {% if signed_by == "user" %}<span class="material-symbols-rounded icon-xs" aria-hidden="true">check_circle</span> Signed by @{{ name }}{% elif signed_by == "server" %}<span class="material-symbols-rounded icon-xs" aria-hidden="true">verified</span> Server-signed (posted without JavaScript){% else %}<span class="material-symbols-rounded icon-xs" aria-hidden="true">error</span> Signature invalid{% endif %}
+</span>
+{%- endmacro %}
+
+{% macro status(s) -%}<span class="badge status-{{ s }}">{{ s.replace("_", " ") | capitalize }}</span>{%- endmacro %}
+
+{% macro empty(text, link=None, link_text=None, icon="inbox") -%}
+<div class="empty-state">
+  <span class="empty-state-icon"><span class="material-symbols-rounded" aria-hidden="true">{{ icon }}</span></span>
+  <p class="empty-state-title">Nothing here</p>
+  <p class="empty-state-text">{{ text }}</p>
+  {% if link %}<a class="btn-primary" href="{{ link }}">{{ link_text }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro page_header(title, subtitle=None, actions=None) -%}
+<div class="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-semibold">{{ title }}</h1>
+  {% if subtitle %}<p class="text-muted">{{ subtitle }}</p>{% endif %}
+  {% if actions %}<div class="flex flex-wrap gap-2">{{ actions }}</div>{% endif %}
+{%- endmacro %}
+
+{% macro card(content, padded=true, hover=false, classes="") -%}
+<div class="card {{ 'card-hover' if hover }} {{ classes }}">
+  {% if padded %}<div class="p-5">{{ content }}</div>{% else %}{{ content }}{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro toast(message, kind="ok", title=None) -%}
+<div class="toast toast-{{ kind }} removing" role="alert" aria-live="polite">
+  <div class="toast-content">
+    {% if title %}<p class="toast-title">{{ title }}</p>{% endif %}
+    <p class="toast-message">{{ message }}</p>
+  </div>
+  <button class="toast-close" aria-label="Dismiss"><span class="material-symbols-rounded icon-sm" aria-hidden="true">close</span></button>
+</div>
+{%- endmacro %}

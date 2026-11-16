@@ -1,0 +1,222 @@
+/* D1zzy Market: Main Stylesheet
+ * Imports all CSS layers in order.
+ * No utility classes, no custom properties: those live in tokens.css.
+ */
+
+@import "tokens.css";
+@import "base.css";
+@import "components.css";
+@import "layout.css";
+
+/* ============================================================
+ * PAGE-SPECIFIC OVERRIDES
+ * Only minimal, page-specific tweaks that don't warrant components.
+ * ============================================================ */
+
+/* Home page hero.
+   The glow is a background layer of .hero itself (not an oversized ::before), so it always
+   spans exactly the box that contains the text, at every viewport size. */
+.hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-8);
+  padding: var(--space-10) var(--space-4);
+  text-align: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background:
+    radial-gradient(130% 100% at 50% 0%,
+      color-mix(in srgb, var(--color-accent) 20%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent) 7%, transparent) 45%,
+      transparent 75%),
+    linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
+}
+@media (max-width: 479px) { .hero { padding: var(--space-8) var(--space-4); } }
+@media (min-width: 768px) { .hero { padding: var(--space-12) var(--space-8); } }
+.hero-inner { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 640px; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs); font-weight: var(--font-weight-medium); color: var(--color-text-muted);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-full);
+  background-color: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  text-wrap: balance;
+}
+.hero-eyebrow .material-symbols-rounded { font-size: 16px; color: var(--color-accent); }
+.hero-inner { width: 100%; min-width: 0; }
+/* Scales down on narrow phones so "pseudonymously." (one unbreakable word) fits at 320px. */
+.hero h1 { font-size: clamp(1.625rem, 8vw, var(--text-3xl)); font-weight: var(--font-weight-bold); letter-spacing: -0.02em; line-height: var(--line-height-tight); overflow-wrap: break-word; }
+@media (min-width: 768px) { .hero h1 { font-size: var(--text-4xl); } }
+.hero-lead { max-width: 52ch; color: var(--color-text-muted); line-height: var(--line-height-relaxed); }
+.hero-note { max-width: 52ch; font-size: var(--text-sm); color: var(--color-text-subtle); }
+.hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); margin-top: var(--space-2); }
+.hero-actions > * { min-width: 160px; }
+@media (max-width: 479px) { .hero-actions > * { flex: 1 1 100%; } }
+
+/* Home sections */
+.home-section { margin-bottom: var(--space-8); }
+.section-header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
+.section-link { font-size: var(--text-sm); color: var(--color-accent); text-decoration: none; }
+.section-link:hover { text-decoration: underline; }
+
+/* Category grid on home: two columns on phones, four from tablets up. */
+.category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+@media (min-width: 768px) { .category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); } }
+.category-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-decoration: none;
+  color: inherit;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+}
+@media (min-width: 768px) { .category-card { padding: var(--space-5); } }
+.category-card:hover { border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border)); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 26px;
+  color: var(--color-accent);
+  background-color: var(--color-accent-muted);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border-radius: var(--radius-md);
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  transition: color var(--transition-base), background-color var(--transition-base), transform var(--transition-base);
+}
+.category-card:hover .category-icon { color: var(--color-accent-text); background-color: var(--color-accent); transform: rotate(-6deg) scale(1.05); font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.category-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.category-name { font-size: var(--text-base); font-weight: var(--font-weight-semibold); text-transform: capitalize; }
+.category-count { font-size: var(--text-xs); color: var(--color-text-subtle); }
+
+/* Listing detail page layout. min-width: 0 lets grid columns shrink below their longest
+   unbreakable content instead of widening the page on phones. */
+.listing-detail {
+  display: grid;
+  gap: var(--space-6);
+}
+.listing-detail > * { min-width: 0; }
+/* Signature badges carry a sentence; let them wrap instead of forcing horizontal scroll. */
+[x-data="sigBadge"] { max-width: 100%; white-space: normal; text-align: left; line-height: var(--line-height-snug); border-radius: var(--radius-md); }
+@media (min-width: 1024px) { .listing-detail { grid-template-columns: 1.4fr 1fr; } }
+
+/* Conversation page: the log scrolls, the page does not need a fixed height. */
+.conversation-page { display: flex; flex-direction: column; gap: var(--space-4); }
+.conversation-page .chat-log { max-height: min(62vh, 680px); min-height: 280px; overflow-y: auto; }
+
+/* Vendor dashboard stats */
+.stats-grid { display: grid; gap: var(--space-4); }
+@media (min-width: 640px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* Settings sections */
+.settings-section { margin-bottom: var(--space-6); }
+.settings-section:last-child { margin-bottom: 0; }
+
+/* Moderation queue */
+.moderation-queue { display: flex; flex-direction: column; gap: var(--space-3); }
+.moderation-item { display: grid; gap: var(--space-3); padding: var(--space-4); }
+@media (min-width: 768px) { .moderation-item { grid-template-columns: 1fr auto auto; align-items: center; } }
+
+/* Offer tabs */
+.offer-tabs { border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); }
+
+/* Media gallery on listing detail: one photo fills the column; more form a grid. */
+.media-gallery { display: grid; gap: var(--space-3); }
+@media (min-width: 640px) { .media-gallery:has(> :nth-child(2)) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.media-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-lg); background-color: var(--color-surface-hover); }
+.media-gallery img:only-child { aspect-ratio: auto; max-height: 560px; object-fit: contain; }
+
+/* Flash messages (server-rendered). ok/warn/err come from deps.FLASH; success/error are
+   used by the login and register pages. */
+.flash { display: flex; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-5); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); border-radius: var(--radius-md); border: 1px solid; }
+.flash .material-symbols-rounded { flex-shrink: 0; margin-top: 1px; }
+.flash-ok, .flash-success { border-color: color-mix(in srgb, var(--color-success) 60%, transparent); background-color: var(--color-success-muted); color: #86efac; }
+.flash-warn { border-color: color-mix(in srgb, var(--color-warning) 60%, transparent); background-color: var(--color-warning-muted); color: #fcd34d; }
+.flash-err, .flash-error { border-color: color-mix(in srgb, var(--color-error) 60%, transparent); background-color: var(--color-error-muted); color: #fca5a5; }
+
+/* Unlock dialog specific */
+#unlock-dialog { max-width: 400px; }
+#unlock-dialog .material-symbols-rounded { font-size: 48px; color: var(--color-accent); margin-bottom: var(--space-4); }
+
+/* Image upload preview */
+.image-preview-grid { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+.image-preview-item { position: relative; aspect-ratio: 1 / 1; border-radius: var(--radius-md); overflow: hidden; }
+.image-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+.image-preview-remove { position: absolute; top: var(--space-1); right: var(--space-1); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.6); color: var(--color-text); border: none; border-radius: var(--radius-full); cursor: pointer; opacity: 0; transition: opacity var(--transition-fast); }
+.image-preview-item:hover .image-preview-remove { opacity: 1; }
+
+/* Chat specific */
+.chat-log { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+.chat-log::-webkit-scrollbar { width: 6px; }
+.chat-end-marker { flex-shrink: 0; height: 20px; }
+
+/* Signature badge */
+.sig-badge { display: inline-flex; align-items: center; gap: var(--space-1); }
+
+/* Report modal */
+.report-modal { max-width: 500px; }
+.report-modal .field { margin-bottom: var(--space-3); }
+
+/* Rating display */
+.rating-display { display: inline-flex; align-items: center; gap: var(--space-2); }
+.rating-display .rating-stars { margin-right: var(--space-1); }
+.rating-display .rating-count { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+/* Empty states: the icon wrapper sets a size, the glyph must follow it. */
+.empty-state { padding: var(--space-8) var(--space-4); }
+.empty-state-icon .material-symbols-rounded { font-size: 48px; }
+
+/* Vendor badge */
+.vendor-badge { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-xs); font-weight: var(--font-weight-medium); padding: var(--space-1) var(--space-2); background-color: var(--color-accent-muted); color: var(--color-accent); border-radius: var(--radius-full); }
+
+/* Skeleton loaders for specific components */
+.listing-card-skeleton .skeleton-image { aspect-ratio: 1 / 1; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.listing-card-skeleton .skeleton-title { height: 1.25rem; width: 80%; }
+.listing-card-skeleton .skeleton-price { height: 1.5rem; width: 40%; margin-top: var(--space-2); }
+.listing-card-skeleton .skeleton-meta { height: 0.75rem; width: 60%; margin-top: var(--space-2); }
+
+.offer-card-skeleton .skeleton-row { height: 1rem; width: 100%; margin-bottom: var(--space-2); }
+.offer-card-skeleton .skeleton-row:last-child { width: 60%; }
+
+/* Keyboard focus. An outline follows each element's own border-radius, so the ring lines up
+   on cards, pills and buttons alike (the old box-shadow + forced radius did not). Inputs
+   draw their own ring in components.css. */
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.input:focus-visible, .input-wrapper .input:focus-visible { outline: none; }
+
+/* Skip link for accessibility */
+.skip-link { position: absolute; top: -100%; left: var(--space-4); padding: var(--space-2) var(--space-4); background-color: var(--color-accent); color: var(--color-accent-text); border-radius: var(--radius-md); z-index: var(--z-tooltip); transition: top var(--transition-fast); }
+.skip-link:focus { top: var(--space-4); }
+
+/* HTMX indicators */
+.htmx-indicator { opacity: 0; transition: opacity var(--transition-fast); }
+.htmx-request .htmx-indicator { opacity: 1; }
+.htmx-request.htmx-indicator { opacity: 1; }
+
+/* Form validation states in page context */
+.field .input-error { border-color: var(--color-error); }
+.field .input-error:focus { box-shadow: 0 0 0 1px var(--color-error); }
+.field-error { display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--color-error); margin-top: var(--space-1); }
+.field-error .material-symbols-rounded { font-size: 14px; }
+
+/* Image loading: fade in once loaded. Only with JavaScript (boot.js sets html.js and
+   img.loaded); without it images are simply visible. The media box shows a neutral
+   placeholder colour meanwhile. */
+img[loading="lazy"] { transition: opacity var(--transition-slow), transform var(--transition-slow); }
+html.js img[loading="lazy"]:not(.loaded) { opacity: 0; }
+
+/* Print styles for listings */
+@media print {
+  .no-print { display: none !important; }
+  .listing-card { break-inside: avoid; page-break-inside: avoid; }
+  .conversation-page { height: auto; max-height: none; }
+}

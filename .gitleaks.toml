@@ -1,0 +1,29 @@
+# gitleaks configuration for D1zzy Market.
+# Extends the default rule set (AWS/GitHub/Stripe/private-key/etc.) and allowlists only
+# non-secret paths and obvious placeholders. Anything that looks like a real credential
+# should fail the scan, not be allowlisted.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local build artefacts, vendored libraries and documented placeholders"
+paths = [
+  '''^\.env$''',  # local-only secrets file; gitignored. CI scans git history, not a checkout's .env.
+  '''^\.venv/''',
+  '''^\.tools/''',
+  '''^\.pytest_cache/''',
+  '''^\.ruff_cache/''',
+  '''^tor-data/''',
+  '''^app/static/vendor/''',
+  '''^uv\.lock$''',
+]
+regexes = [
+  '''sk_test_\.\.\.''',
+  '''pk_test_\.\.\.''',
+  '''whsec_\.\.\.''',
+  '''generate-with-openssl-rand-base64-32''',
+  '''sk_test_dummy''',
+  '''whsec_test_secret''',
+  '''test-secret-key-0123456789''',
+  '''XChaCha20-Poly1305''',  # algorithm name in SECURITY.md, not a credential
+]

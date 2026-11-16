@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-md space-y-4 py-16 text-center">
+  <div class="text-5xl font-bold text-muted">{{ code }}</div>
+  <p class="text-muted">{{ detail if detail is string else "Something went wrong." }}</p>
+  <a class="btn-ghost" href="/">Back to the market</a>
+</div>
+{% endblock %}

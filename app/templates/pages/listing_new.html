@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}New listing · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-4">
+  <h1>New listing</h1>
+  {% with action="/listings/new", api="/api/listings", method="POST", p=None %}
+    {% include "partials/listing-form.html" %}
+  {% endwith %}
+</div>
+{% endblock %}

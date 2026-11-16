@@ -1,0 +1,20 @@
+[Unit]
+Description=D1zzy Market - PostgreSQL
+
+[Container]
+ContainerName=d1zzy-db
+Image=docker.io/library/postgres:16-alpine
+Network=d1zzy-network.network
+NetworkAlias=db
+Volume=d1zzy-pgdata.volume:/var/lib/postgresql/data
+EnvironmentFile=%h/.config/d1zzy/env
+HealthCmd=pg_isready -U d1zzy
+HealthInterval=10s
+HealthStartPeriod=20s
+Notify=healthy
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

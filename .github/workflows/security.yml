@@ -1,0 +1,72 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly dependency audit even when nothing changes.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sast:
+    name: SAST (ruff + Bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --extra dev --extra security
+      - name: Ruff
+        run: uv run ruff check app tests alembic
+      - name: Bandit (fail on high severity)
+        run: uv run bandit -q -r app -c pyproject.toml -lll
+
+  dependencies:
+    name: Dependency audit (pip-audit)
+    runs-on: ubuntu-latest
+    # Advisories are tracked in docs/security/SECURITY-ASSESSMENT.md. This job records them
+    # without blocking merges while upstream pins are being upgraded.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --extra security
+      - name: Export production requirements
+        run: uv export --frozen --no-dev --no-hashes --format requirements-txt -o requirements-audit.txt
+      - name: pip-audit
+        run: uv run pip-audit -r requirements-audit.txt --progress-spinner off
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional for organisations: GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  semgrep:
+    name: Semgrep (pattern SAST)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep --config p/python --config p/secrets --error --quiet app

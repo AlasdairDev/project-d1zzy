@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Edit listing · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-4">
+  <div class="flex items-baseline justify-between">
+    <h1>Edit listing</h1>
+    <a href="/listings/{{ view.listing.id }}" class="text-sm">Cancel</a>
+  </div>
+  {% if view.listing.status == "hidden" %}
+    <div class="flash flash-warn">This listing was hidden by a moderator and cannot be edited.</div>
+  {% elif view.plain %}
+    {% with action="/listings/" ~ view.listing.id ~ "/edit", api="/api/listings/" ~ view.listing.id, method="PUT", p=view.plain %}
+      {% include "partials/listing-form.html" %}
+    {% endwith %}
+  {% else %}
+    <div class="card text-error">This listing could not be decrypted.</div>
+  {% endif %}
+</div>
+{% endblock %}

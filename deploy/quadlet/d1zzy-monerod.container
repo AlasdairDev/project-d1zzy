@@ -1,0 +1,13 @@
+[Unit]
+Description=D1zzy Market - monerod (regtest; optional, start manually)
+
+[Container]
+ContainerName=d1zzy-monerod
+Image=docker.io/sethsimmons/simple-monerod:v0.18.3.4
+Exec=--regtest --offline --fixed-difficulty=1 --no-igd --rpc-bind-ip=0.0.0.0 --rpc-bind-port=18081 --confirm-external-bind --disable-rpc-ban
+Network=d1zzy-network.network
+NetworkAlias=monerod
+Volume=d1zzy-monerochain.volume:/home/monero/.bitmonero
+
+[Service]
+Restart=always

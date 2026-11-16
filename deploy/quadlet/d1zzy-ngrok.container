@@ -1,0 +1,14 @@
+[Unit]
+Description=D1zzy Market - ngrok clearnet tunnel (optional; start manually)
+Requires=d1zzy-app.service
+After=d1zzy-app.service
+
+[Container]
+ContainerName=d1zzy-ngrok
+Image=docker.io/ngrok/ngrok:3.39.11-alpine
+Network=d1zzy-network.network
+EnvironmentFile=%h/.config/d1zzy/env
+Exec=http http://app:8000 --log stdout
+
+[Service]
+Restart=on-failure

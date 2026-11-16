@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block title %}Moderation · D1zzy Market{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+  <h1 class="text-2xl font-semibold">Moderation</h1>
+  <p class="text-sm text-muted">Every action requires a reason and is written to the audit log.</p>
+</div>
+
+<section class="mb-10">
+  <div class="flex items-baseline justify-between mb-4">
+    <h2 class="text-xl font-semibold">Pending Vendor Applications</h2>
+    <a href="/moderation/vendors/pending" class="btn-ghost btn-sm">
+      <span class="material-symbols-rounded icon-sm" aria-hidden="true">storefront</span>
+      View Queue
+    </a>
+  </div>
+  <p class="text-sm text-muted mb-4">Review and approve/reject vendor applications.</p>
+</section>
+
+<section class="mb-10 space-y-4">
+  <div class="flex items-baseline justify-between mb-4">
+    <h2 class="text-xl font-semibold">Report queue</h2>
+    <span class="badge badge-warning">{{ queue | length }} open</span>
+  </div>
+  {% for row in queue %}{% set r = row.report %}
+  <article class="card space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span class="text-sm flex items-center gap-2"><span class="badge badge-warning">{{ r.reason.replace("_", " ") }}</span> {{ r.target_type }} reported by @{{ r.reporter.handle }} · {{ r.created_at | ago }}</span>
+      {{ m.action("/moderation/reports/" ~ r.id ~ "/dismiss", "Dismiss", "btn-ghost", icon="close") }}
+    </div>
+    {% if row.details %}<blockquote class="border-l-2 border-border pl-3 text-sm text-muted">{{ row.details.text }}</blockquote>{% endif %}
+
+    {% if r.target_type == "listing" and row.listing %}{% set v = row.listing %}
+    <div class="card space-y-3 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <a href="/listings/{{ v.id }}" class="font-medium truncate block">{{ v.plain.title if v.plain else "(unreadable)" }}</a>
+          <span class="text-sm text-muted">by @{{ v.seller.handle }} · {{ v.listing.report_count }} reports</span> {{ m.status(v.listing.status) }}
+          {% if v.plain %}<p class="mt-1 line-clamp-3 text-sm text-muted">{{ v.plain.desc }}</p>{% endif %}
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {% if v.listing.status == "hidden" %}{{ m.action("/moderation/listings/" ~ v.id ~ "/unhide", "Unhide", "btn-primary", true, icon="visibility") }}
+          {% else %}{{ m.action("/moderation/listings/" ~ v.id ~ "/hide", "Hide listing", "btn-danger", true, icon="visibility_off") }}{% endif %}
+          {% if v.seller.is_active and not v.seller.is_superuser %}{{ m.action("/moderation/users/" ~ v.seller.id ~ "/suspend", "Suspend seller", "btn-danger", true, icon="block") }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% elif r.target_type == "user" and row.target_user %}{% set t = row.target_user %}
+    <div class="card p-4 flex flex-wrap items-center justify-between gap-3">
+      <a href="/u/{{ t.handle }}" class="font-medium">@{{ t.handle }}</a>
+      <div class="flex flex-wrap gap-2">
+        {{ m.action("/moderation/users/" ~ t.id ~ "/warn", "Warn", "btn-ghost", true, icon="warning") }}
+        {% if t.is_active %}{{ m.action("/moderation/users/" ~ t.id ~ "/suspend", "Suspend", "btn-danger", true, icon="block") }}{% endif %}
+      </div>
+    </div>
+    {% elif r.target_type == "message" %}
+    <div class="card p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+      {% if row.message %}
+      <span class="flex-1">Message #{{ row.message.id }} ({{ row.message.mode }} mode){% if row.message.plaintext %}: “{{ row.message.plaintext }}”{% else %}. Content visible only through the reporter's disclosure above{% endif %}</span>
+      <div class="flex flex-wrap gap-2">
+        {{ m.action("/moderation/messages/" ~ row.message.id ~ "/delete", "Delete message", "btn-danger", true, icon="delete") }}
+        {{ m.action("/moderation/users/" ~ row.message.sender_id ~ "/warn", "Warn sender", "btn-ghost", true, icon="warning") }}
+      </div>
+      {% else %}<span class="text-muted">Message already deleted.</span>{% endif %}
+    </div>
+    {% endif %}
+  </article>
+  {% else %}{{ m.empty("The queue is empty.", icon="check_circle") }}{% endfor %}
+</section>
+
+<section class="mb-10 space-y-4">
+  <h2 class="text-xl font-semibold">Disputes</h2>
+  {% for row in disputes %}
+  <div class="card p-4 space-y-3">
+    <div class="text-sm"><a href="/listings/{{ row.offer.listing_id }}" class="text-accent hover:no-underline">{{ row.title }}</a>. @{{ row.offer.buyer.handle }} vs @{{ row.offer.listing.seller.handle }}
+      {% if row.plain %}· {{ row.plain.amount_cents | money(row.plain.currency) }} via {{ row.plain.payment_method | payment_label }}{% endif %}</div>
+    <form action="/moderation/offers/{{ row.offer.id }}/resolve" method="post" class="flex flex-wrap gap-2">
+      {{ m.csrf() }}
+      <select name="outcome" class="input w-auto"><option value="release">Release to seller</option><option value="refund">Refund buyer</option></select>
+      <input class="input w-auto flex-1" name="reason" placeholder="Reason (logged)" required>
+      <button class="btn-primary" type="submit"><span class="material-symbols-rounded icon-sm" aria-hidden="true">gavel</span> Resolve</button>
+    </form>
+  </div>
+  {% else %}{{ m.empty("No open disputes.", icon="gavel") }}{% endfor %}
+</section>
+
+<section class="mb-10 grid gap-6 md:grid-cols-2">
+  <div class="space-y-3">
+    <h2 class="text-xl font-semibold">Hidden listings</h2>
+    {% for v in hidden %}
+    <div class="card p-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+      <a href="/listings/{{ v.id }}" class="font-medium truncate block">{{ v.plain.title if v.plain else v.id }}</a>
+      {{ m.action("/moderation/listings/" ~ v.id ~ "/unhide", "Unhide", "btn-primary", true, icon="visibility") }}
+    </div>
+    {% else %}{{ m.empty("None.", icon="visibility") }}{% endfor %}
+  </div>
+  <div class="space-y-3">
+    <h2 class="text-xl font-semibold">Suspended users</h2>
+    {% for u in suspended %}
+    <div class="card p-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+      <a href="/u/{{ u.handle }}">@{{ u.handle }}</a>
+      {{ m.action("/moderation/users/" ~ u.id ~ "/unsuspend", "Unsuspend", "btn-primary", true, icon="lock_open") }}
+    </div>
+    {% else %}{{ m.empty("None.", icon="lock_open") }}{% endfor %}
+  </div>
+</section>
+
+<section>
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-xl font-semibold">Audit log</h2>
+    <a href="/api/moderation/audit" class="text-xs text-muted">JSON export</a>
+  </div>
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr><th>When</th><th>Moderator</th><th>Action</th><th>Target</th><th>Reason</th></tr>
+      </thead>
+      <tbody>
+        {% for a in audit %}
+        <tr>
+          <td class="p-3 whitespace-nowrap">{{ a.created_at | ago }}</td>
+          <td class="p-3">@{{ a.moderator.handle }}</td>
+          <td class="p-3"><code class="text-xs">{{ a.action_type }}</code></td>
+          <td class="p-3 text-xs">{{ a.target_type }} <code class="break-all">{{ a.target_id }}</code></td>
+          <td class="p-3">{{ a.reason }}</td>
+        </tr>
+        {% else %}<tr><td class="p-3 text-muted" colspan="5">No actions yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

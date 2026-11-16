@@ -1,0 +1,66 @@
+# BTCPay Server overlay (regtest). Use together with the main file:
+#   podman-compose -f deploy/compose/podman-compose.yml -f deploy/compose/btcpay.yml --profile btcpay up -d
+# or simply `just btcpay-up`. Regtest needs no chain sync; mine blocks with:
+#   podman-compose -f deploy/compose/podman-compose.yml -f deploy/compose/btcpay.yml exec bitcoind bitcoin-cli -regtest -rpcuser=btc -rpcpassword=btc -generate 101
+# Paths are relative to this file.
+#
+# Lightning: add a lightning node (e.g. btcpayserver/lightning:v24 for Core Lightning) and set
+# BTCPAY_BTCLIGHTNING; until then invoices are on-chain (regtest) only.
+services:
+  bitcoind:
+    profiles: [btcpay]
+    image: docker.io/btcpayserver/bitcoin:28.1
+    environment:
+      BITCOIN_NETWORK: regtest
+      BITCOIN_EXTRA_ARGS: |
+        rpcuser=btc
+        rpcpassword=btc
+        rpcbind=0.0.0.0:43782
+        rpcallowip=0.0.0.0/0
+        rpcport=43782
+        port=39388
+        whitelist=0.0.0.0/0
+        fallbackfee=0.0002
+    volumes: [bitcoindata:/data]
+    restart: unless-stopped
+
+  nbxplorer:
+    profiles: [btcpay]
+    image: docker.io/nicolasdorier/nbxplorer:2.5.30
+    environment:
+      NBXPLORER_NETWORK: regtest
+      NBXPLORER_CHAINS: btc
+      NBXPLORER_BIND: 0.0.0.0:32838
+      NBXPLORER_BTCRPCURL: http://bitcoind:43782/
+      NBXPLORER_BTCRPCUSER: btc
+      NBXPLORER_BTCRPCPASSWORD: btc
+      NBXPLORER_BTCNODEENDPOINT: bitcoind:39388
+      NBXPLORER_POSTGRES: Host=db;Port=5432;Database=nbxplorer;Username=${POSTGRES_USER:-d1zzy};Password=${POSTGRES_PASSWORD:-d1zzy}
+      NBXPLORER_AUTOMIGRATE: "1"
+      NBXPLORER_NOAUTH: "1"
+    volumes: [nbxplorerdata:/datadir]
+    depends_on: [bitcoind, db]
+    restart: unless-stopped
+
+  btcpay:
+    profiles: [btcpay]
+    build: ../docker/btcpay
+    image: localhost/project-d1zzy-market-btcpay:dev
+    environment:
+      BTCPAY_NETWORK: regtest
+      BTCPAY_BIND: 0.0.0.0:49392
+      BTCPAY_ROOTPATH: /
+      BTCPAY_CHAINS: btc
+      BTCPAY_BTCEXPLORERURL: http://nbxplorer:32838/
+      BTCPAY_POSTGRES: Host=db;Port=5432;Database=btcpay;Username=${POSTGRES_USER:-d1zzy};Password=${POSTGRES_PASSWORD:-d1zzy}
+      BTCPAY_EXPLORERPOSTGRES: Host=db;Port=5432;Database=nbxplorer;Username=${POSTGRES_USER:-d1zzy};Password=${POSTGRES_PASSWORD:-d1zzy}
+    ports: ["127.0.0.1:23000:49392"]
+    volumes: [btcpaydata:/datadir]
+    depends_on: [nbxplorer, db]
+    healthcheck: {test: ["CMD", "curl", "-fs", "http://localhost:49392/api/v1/health"], interval: 30s, timeout: 10s, retries: 20, start_period: 120s}
+    restart: unless-stopped
+
+volumes:
+  bitcoindata:
+  nbxplorerdata:
+  btcpaydata:

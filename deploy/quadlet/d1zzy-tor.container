@@ -1,0 +1,18 @@
+[Unit]
+Description=D1zzy Market - Tor onion service
+Requires=d1zzy-app.service
+After=d1zzy-app.service
+
+[Container]
+ContainerName=d1zzy-tor
+Image=localhost/project-d1zzy-market-tor:dev
+Network=d1zzy-network.network
+Environment=TOR_TARGET_HOST=app TOR_TARGET_PORT=8000
+Volume=d1zzy-torkeys.volume:/var/lib/tor/hidden_service
+Volume=d1zzy-torexport.volume:/run/tor-export
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

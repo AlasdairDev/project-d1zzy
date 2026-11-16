@@ -1,0 +1,67 @@
+{# expects `row` (offer_row dict), `tab`, `rated` #}
+{% import "macros.html" as m with context %}
+{% set o = row.offer %}{% set p = row.plain %}
+<div class="offer-card">
+  <div class="offer-card-header">
+    <div class="offer-card-title">
+      <a href="/listings/{{ o.listing_id }}" class="font-medium">{{ row.title }}</a>
+      <div class="text-sm text-muted mt-1">
+        {% if tab == "selling" %}from @{{ o.buyer.handle }}{% else %}to @{{ o.listing.seller.handle }}{% endif %}
+        · {{ o.created_at | ago }}
+      </div>
+    </div>
+    {{ m.status(o.status) }}
+  </div>
+
+  {% if p %}
+  <div class="offer-card-details">
+    <div class="flex flex-wrap items-baseline gap-3">
+      <span class="text-xl font-semibold text-accent">{{ p.amount_cents | money(p.currency) }}</span>
+      <span class="badge badge-info">{{ p.payment_method | payment_label }}</span>
+    </div>
+    {{ m.sig_badge("offer", o.offer_ct, o.sig, o.buyer.signing_pubkey, o.buyer.handle, row.signed_by) }}
+    {% if p.message %}<p class="text-sm text-muted">“{{ p.message }}”</p>{% endif %}
+  {% endif %}
+
+  {% if o.status == "accepted" and o.payment_ref and p and p.payment_method == "monero" and tab == "buying" %}
+  <div class="card space-y-2" style="border-color: var(--color-info);">
+    <p class="text-sm">Send exactly <strong>{{ "%.2f" % (p.amount_cents / 100) }} XMR</strong> (testnet) to:</p>
+    <code class="break-all text-xs text-muted">{{ o.payment_ref }}</code>
+    <span class="text-xs text-muted">Confirmed automatically after 1 confirmation.</span>
+  </div>
+  {% endif %}
+
+  <div class="offer-card-actions">
+    {% if tab == "selling" and o.status == "pending" %}
+      {{ m.action("/offers/" ~ o.id ~ "/accept", "Accept", "btn-primary", icon="check_circle") }}
+      {{ m.action("/offers/" ~ o.id ~ "/reject", "Reject", "btn-ghost", icon="close") }}
+    {% endif %}
+    {% if tab == "buying" and o.status == "accepted" and p and p.payment_method != "cod" %}
+      {{ m.action("/offers/" ~ o.id ~ "/pay", "Pay now" if not o.payment_ref else "Continue payment", "btn-primary", icon="attach_money") }}
+      {{ m.action("/offers/" ~ o.id ~ "/reject", "Withdraw", "btn-ghost", icon="close") }}
+    {% elif tab == "buying" and o.status == "accepted" and p and p.payment_method == "cod" %}
+      <p class="text-sm text-muted">Cash on delivery: pay the seller when you receive the item.</p>
+      {{ m.action("/offers/" ~ o.id ~ "/reject", "Withdraw", "btn-ghost", icon="close") }}
+    {% endif %}
+    {% if tab == "buying" and o.status == "pending" %}{{ m.action("/offers/" ~ o.id ~ "/reject", "Withdraw", "btn-ghost", icon="close") }}{% endif %}
+    {% if tab == "buying" and o.status == "paid" %}{{ m.action("/offers/" ~ o.id ~ "/complete", "I received it", "btn-primary", icon="check_circle") }}{% endif %}
+    {% if o.status == "paid" %}{{ m.action("/offers/" ~ o.id ~ "/dispute", "Open dispute", "btn-danger", icon="report") }}{% endif %}
+  </div>
+
+  {% if o.status == "completed" and o.id not in rated %}
+  <form action="/offers/{{ o.id }}/rate" method="post" class="flex flex-wrap items-end gap-2"
+        x-data="signedForm" data-kind="rating" data-api="/api/ratings" data-next="/offers?tab={{ tab }}&m=rated"
+        data-offer-id="{{ o.id }}" data-listing-id="{{ o.listing_id }}">
+    {{ m.csrf() }}
+    <div class="field">
+      <label for="score-{{ o.id }}">Rate @{{ o.buyer.handle if tab == "selling" else o.listing.seller.handle }}</label>
+      <select id="score-{{ o.id }}" name="score" class="input w-28">{% for s in [5,4,3,2,1] %}<option value="{{ s }}">{{ "★" * s }}</option>{% endfor %}</select>
+    </div>
+    <div class="field flex-1">
+      <label for="note-{{ o.id }}">Note (optional)</label>
+      <input id="note-{{ o.id }}" class="input" name="note" maxlength="500">
+    </div>
+    <button class="btn-primary" type="submit">Submit rating</button>
+  </form>
+  {% endif %}
+</div>

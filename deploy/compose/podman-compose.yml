@@ -1,0 +1,133 @@
+# Development stack. `just dev` = core services; `just dev-crypto` adds Monero (regtest);
+# `just btcpay-up` overlays deploy/compose/btcpay.yml for BTCPay (bitcoind regtest).
+# Run through the justfile from the repository root. Paths are relative to this file.
+name: project-d1zzy-market
+
+x-app: &app
+  build:
+    context: ../..
+    dockerfile: ../docker/Dockerfile
+    target: runtime
+  image: localhost/project-d1zzy-market:dev
+  env_file: ../../.env
+  environment:
+    TOR_HOSTNAME_FILE: /run/tor-export/hostname
+    FORWARDED_ALLOW_IPS: "*"
+  userns_mode: "keep-id:uid=10001,gid=10001"
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  pids_limit: 256
+  mem_limit: 512m
+  volumes:
+    - ../../app:/app/app:z
+    - ../../alembic:/app/alembic:z
+    - ../../tor-data:/run/tor-export:ro,z
+  depends_on:
+    db: {condition: service_healthy}
+    redis: {condition: service_healthy}
+    ipfs: {condition: service_healthy}
+  restart: unless-stopped
+
+services:
+  db:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-d1zzy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-d1zzy}
+      POSTGRES_DB: ${POSTGRES_DB:-project_d1zzy_market}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"], interval: 5s, timeout: 3s, retries: 20}
+    restart: unless-stopped
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck: {test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 3s, retries: 20}
+    restart: unless-stopped
+
+  ipfs:
+    image: docker.io/ipfs/kubo:v0.33.0
+    environment: {IPFS_PROFILE: server}
+    # --offline: no DHT/swarm. A Tor onion service must not announce its real IP to the
+    # public IPFS network. Content is stored and pinned locally; the gateway is not exposed.
+    command: ["daemon", "--migrate=true", "--offline"]
+    volumes: [ipfsdata:/data/ipfs]
+    ports: ["127.0.0.1:5001:5001"]
+    healthcheck: {test: ["CMD", "ipfs", "id"], interval: 10s, timeout: 5s, retries: 30}
+    restart: unless-stopped
+
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.31.4
+    ports: ["127.0.0.1:8025:8025"]
+    restart: unless-stopped
+
+  app:
+    <<: *app
+    command: ["web"]
+    environment:
+      TOR_HOSTNAME_FILE: /run/tor-export/hostname
+      FORWARDED_ALLOW_IPS: "*"
+      UVICORN_EXTRA: "--reload --reload-dir /app/app"
+    ports: ["127.0.0.1:8000:8000"]
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"], interval: 15s, timeout: 5s, retries: 5, start_period: 30s}
+
+  worker:
+    <<: *app
+    command: ["worker"]
+
+  tor:
+    build: ../docker/tor
+    image: localhost/project-d1zzy-market-tor:dev
+    environment: {TOR_TARGET_HOST: app, TOR_TARGET_PORT: "8000"}
+    volumes: [torkeys:/var/lib/tor/hidden_service, ../../tor-data:/run/tor-export:z]
+    depends_on: [app]
+    restart: unless-stopped
+
+  ngrok:
+    image: docker.io/ngrok/ngrok:3.39.11-alpine
+    environment: {NGROK_AUTHTOKEN: "${NGROK_AUTHTOKEN:-}", NGROK_DOMAIN: "${NGROK_DOMAIN:-}"}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -z "$$NGROK_AUTHTOKEN" ]; then echo "NGROK disabled"; exit 0; fi
+        if [ -n "$$NGROK_DOMAIN" ]; then exec ngrok http http://app:8000 --url "$$NGROK_DOMAIN" --log stdout; fi
+        exec ngrok http http://app:8000 --log stdout
+    depends_on: [app]
+    restart: on-failure
+
+  # --- Monero (opt-in: `just dev-crypto`) -----------------------------------------------
+  # Regtest instead of testnet: no multi-GB sync, blocks on demand (`just xmr-mine`).
+  monerod:
+    profiles: [monero]
+    image: docker.io/sethsimmons/simple-monerod:v0.18.3.4
+    # The image entrypoint already adds --non-interactive.
+    command: ["--regtest", "--offline", "--fixed-difficulty=1", "--no-igd",
+              "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=18081", "--confirm-external-bind",
+              "--disable-rpc-ban"]
+    volumes: [monerodata:/home/monero/.bitmonero]
+    restart: unless-stopped
+
+  monero:
+    profiles: [monero]
+    image: docker.io/sethsimmons/simple-monero-wallet-rpc:v0.18.3.4
+    # The image entrypoint adds --non-interactive --rpc-bind-ip=0.0.0.0 --confirm-external-bind.
+    command: ["--daemon-address=monerod:18081", "--trusted-daemon",
+              "--allow-mismatched-daemon-version", "--rpc-bind-port=18083",
+              "--rpc-login=${MONERO_RPC_USER:-monero}:${MONERO_RPC_PASSWORD:-monero}",
+              "--wallet-dir=/home/monero/wallet"]
+    volumes: [monerowallets:/home/monero/wallet]
+    depends_on: [monerod]
+    healthcheck: {test: ["CMD-SHELL", "pidof monero-wallet-rpc"], interval: 15s, timeout: 5s, retries: 10}
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  ipfsdata:
+  monerodata:
+  monerowallets:
+  torkeys:

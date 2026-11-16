@@ -1,0 +1,8 @@
+{# One page of the listings grid plus the next-page sentinel. HTMX swaps the sentinel for
+   the next page when it scrolls into view; without JS it is a plain "Load more" link. #}
+{% for v in listings %}{% include "partials/listing-card.html" %}{% endfor %}
+{% if has_more %}
+  {% set next_url = "/listings?page=" ~ (page + 1) ~ ("&category=" ~ category if category else "") ~ ("&q=" ~ (q | urlencode) if q else "") %}
+  <a href="{{ next_url }}" hx-get="{{ next_url }}" hx-trigger="revealed" hx-swap="outerHTML"
+     class="btn-ghost w-full sm:w-auto">Load more</a>
+{% endif %}

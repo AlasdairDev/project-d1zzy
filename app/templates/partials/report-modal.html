@@ -1,0 +1,40 @@
+{# Report form inside <details>: opens without JavaScript. expects target_type, target_id #}
+{% from "macros.html" import csrf with context %}
+<details class="report">
+  <summary class="btn-ghost btn-sm" aria-label="Report this content">
+    <span class="material-symbols-rounded icon-sm" aria-hidden="true">flag</span> Report
+  </summary>
+  {% set rid = target_type ~ "-" ~ target_id %}
+  <form action="/reports" method="post" class="report-panel space-y-3"
+        x-data="signedForm" data-kind="report" data-api="/api/reports" data-next="{{ request.url.path }}?m=reported">
+    <p class="report-panel-title"><span class="material-symbols-rounded icon-sm text-error" aria-hidden="true">flag</span>Report this {{ target_type }}</p>
+    {{ csrf() }}
+    <input type="hidden" name="target_type" value="{{ target_type }}">
+    <input type="hidden" name="target_id" value="{{ target_id }}">
+    <input type="hidden" name="back" value="{{ request.url.path }}">
+
+    <div class="field">
+      <label for="report-reason-{{ rid }}" class="field-label">Reason</label>
+      <select id="report-reason-{{ rid }}" class="input" name="reason" required>
+        <option value="prohibited_item">Prohibited item</option>
+        <option value="scam">Scam or fraud</option>
+        <option value="counterfeit">Counterfeit</option>
+        <option value="illegal">Illegal content</option>
+        <option value="harassment">Harassment</option>
+        <option value="spam">Spam</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="report-details-{{ rid }}" class="field-label">Details for moderators (optional)</label>
+      <textarea id="report-details-{{ rid }}" class="input" name="details" rows="2" maxlength="4000" placeholder="Describe the issue...">{{ details_prefill or "" }}</textarea>
+    </div>
+
+    {% if target_type == "message" %}
+    <p class="text-xs text-warning"><span class="material-symbols-rounded icon-xs" aria-hidden="true">warning</span> Reporting discloses this message's text to moderators. That is the only way they can see end-to-end encrypted content.</p>
+    {% endif %}
+
+    <button class="btn-danger w-full" type="submit">Send report</button>
+  </form>
+</details>

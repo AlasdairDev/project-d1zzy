@@ -1,0 +1,18 @@
+[Unit]
+Description=D1zzy Market - BTCPay Server (optional; needs bitcoind + NBXplorer, see deploy/compose/btcpay.yml)
+Requires=d1zzy-db.service
+After=d1zzy-db.service
+
+[Container]
+ContainerName=d1zzy-btcpay
+Image=localhost/project-d1zzy-market-btcpay:dev
+Network=d1zzy-network.network
+NetworkAlias=btcpay
+PublishPort=127.0.0.1:23000:49392
+Volume=d1zzy-btcpaydata.volume:/datadir
+Environment=BTCPAY_NETWORK=regtest BTCPAY_BIND=0.0.0.0:49392 BTCPAY_CHAINS=btc BTCPAY_BTCEXPLORERURL=http://nbxplorer:32838/
+Environment="BTCPAY_POSTGRES=Host=db;Port=5432;Database=btcpay;Username=d1zzy;Password=d1zzy"
+Environment="BTCPAY_EXPLORERPOSTGRES=Host=db;Port=5432;Database=nbxplorer;Username=d1zzy;Password=d1zzy"
+
+[Service]
+Restart=always
